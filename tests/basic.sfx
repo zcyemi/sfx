@@ -1,0 +1,61 @@
+#file basic.sfx
+
+
+#include "main.sfx"
+
+
+#include <XXDWDW/aaa.sfx>
+
+
+#GLSL
+
+precision mediump float;
+
+in vec4 aPosition: POSITION_0;
+
+void vertex(){
+    vec4 vpos = aPosition;
+    gl_Position = MATRIX_MVP * vpos;
+}
+
+out vec4 fragColor : TARGET_0;
+void fragment(){
+    fragColor = vec4(1.0);
+}
+
+#END
+
+
+technique XXXX{
+    vs: vertex;
+    ps: fragment;
+    pipeline: {
+        queue: overlay;
+        zwrite: off;
+        blend: one,one;
+    }
+    property: {
+        TEXCOORD_0: vUV;
+        POSITION_0: aPosition;
+        COLOR_0: vColor;
+        TARGET_0: fragColor;
+    }
+}
+
+
+
+technique XXXX{
+    vs: vertex;
+    ps: fragment;
+    pipeline: {
+        queue: overlay;
+        zwrite: off;
+        blend: one,one;
+    }
+    property: {
+        TEXCOORD_0: vUV;
+        POSITION_0: aPosition;
+        COLOR_0: vColor;
+        TARGET_0: fragColor;
+    }
+}

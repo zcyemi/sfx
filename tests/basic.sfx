@@ -42,9 +42,13 @@ technique XXXX{
     }
 }
 
+#GLSL
 
+//Test GLSLCode
 
-technique XXXX{
+#END
+
+technique QQQQ{
     vs: vertex;
     ps: fragment;
     pipeline: {

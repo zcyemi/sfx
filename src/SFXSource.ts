@@ -14,7 +14,7 @@ export class SFXTechniqueProperty{
     public variable:string;
 }
 
-type SFXTechniqueProperties = {[key:string]:SFXTechniqueProperty}
+export type SFXTechniqueProperties = {[key:string]:SFXTechniqueProperty}
 
 export class SFXTechnique{
     public name:string;
@@ -40,5 +40,10 @@ export class SFXSource{
         if(inc == null) return;
         if(this.includes == null) this.includes = [];
         this.includes.push(inc);
+    }
+
+    public getTechnique(name:string):SFXTechnique{
+        if(this.techniques == null) return null;
+        return this.techniques.find(t=>t.name === name);
     }
 }

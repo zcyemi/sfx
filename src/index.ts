@@ -2,6 +2,7 @@ import { ANTLRInputStream, CommonTokenStream } from 'antlr4ts';
 import * as fs from "fs";
 import { SFXLexer } from './sfx/SFXLexer';
 import { SFXParser } from './sfx/SFXParser';
+import { SFXSourceVisotor } from './SFXSourceVisotor';
 
 
 function test(){
@@ -13,6 +14,11 @@ let tokenstream = new CommonTokenStream(lexer);
 let parser = new SFXParser(tokenstream);
 
 var program = parser.program();
+
+var visitor = new SFXSourceVisotor();
+var source = visitor.visit(program);
+
+console.dir(source);
 
 }
 

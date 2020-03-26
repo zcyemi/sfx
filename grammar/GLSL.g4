@@ -671,6 +671,7 @@ external_declaration:
    | declaration
    | pragma_statement
    | layout_defaults
+   | preprocessor_statement
    ;
 
 function_definition:
@@ -706,6 +707,33 @@ layout_defaults:
    | layout_qualifier OUT_TOK SEMICOLON
    | layout_qualifier BUFFER SEMICOLON
 ;
+
+preprocessor_statement:
+    PREPROC_DEFINE
+   | PREPROC_IF
+   | PREPROC_IFDEF
+   | PREPROC_IFNDEF
+   | PREPROC_ELIF
+   | PREPROC_UNDEF
+   | PREPROC_ELSE
+   | PREPROC_ENDIF
+   ;
+
+PREPROC_DEFINE: PREPROC_PREFIX 'define' ~('\n'|'\r')+ EOL;
+PREPROC_IF: PREPROC_PREFIX 'if' [ \t]+ IDENTIFIER [ \t]* EOL;
+PREPROC_IFDEF: PREPROC_PREFIX 'ifdef' [ \t]+ IDENTIFIER [ \t]* EOL;
+PREPROC_IFNDEF: PREPROC_PREFIX 'ifndef' [ \t]+ IDENTIFIER [ \t]* EOL;
+PREPROC_ELIF: PREPROC_PREFIX 'elif' [ \t]+ IDENTIFIER [ \t]* EOL;
+PREPROC_UNDEF: PREPROC_PREFIX 'undef' [ \t]+ IDENTIFIER [ \t]* EOL;
+
+PREPROC_ELSE: PREPROC_PREFIX 'else' [ \t]* EOL;
+PREPROC_ENDIF: PREPROC_PREFIX 'endif' [ \t]* EOL;
+
+
+
+PREPROC_PREFIX: { this.ignoreNewLine = false; } [ \t]*'#'[ \t]*;
+
+// DEFINE_FN_PARAM: '(' [\d\w, \t]+ ')'; 
 
 PRAGMA_DEBUG_ON:      { this.ignoreNewLine = false; } [ \t]*'#'[ \t]*'pragma'[ \t]+'debug'[ \t]*'('[ \t]*'on'[ \t]*')' ;
 PRAGMA_DEBUG_OFF:     { this.ignoreNewLine = false; } [ \t]*'#'[ \t]*'pragma'[ \t]+'debug'[ \t]*'('[ \t]*'off'[ \t]*')'     ;
@@ -950,6 +978,8 @@ ASSIGN_OP: '=' ;
 
 IDENTIFIER: ('a'..'z' | 'A'..'Z' | '_') (DIGIT | 'a'..'z' | 'A'..'Z' | '_')*;
 
+TYPE_NAME: IDENTIFIER;
+
 fragment DECIMAL_DIGITS: '0' | ('1'..'9' DIGIT*);
 fragment OCTAL_DIGITS: '0' '0'..'7'+;
 fragment HEX_DIGITS: '0x' (DIGIT | 'a'..'f' | 'A'..'F')+;
@@ -959,7 +989,10 @@ COMMENT: ('//' ~('\n'|'\r')* '\r'? '\n' |   '/*' (.)*? '*/') -> skip ;
 
 WS: [\t\r\u000C ]+ { this.skip(); } ;
 
+
+
 EOL: '\n' { if(this.ignoreNewLine) { this.skip(); } this.ignoreNewLine = true; } ;
+
 
 /*
 

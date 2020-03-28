@@ -4,7 +4,6 @@
 import { ParseTreeListener } from "antlr4ts/tree/ParseTreeListener";
 
 import { Pragma_statementContext } from "./GLSLParser";
-import { Extension_statement_listContext } from "./GLSLParser";
 import { Extension_statementContext } from "./GLSLParser";
 import { External_declaration_listContext } from "./GLSLParser";
 import { Variable_identifierContext } from "./GLSLParser";
@@ -101,6 +100,7 @@ import { Basic_interface_blockContext } from "./GLSLParser";
 import { Interface_qualifierContext } from "./GLSLParser";
 import { Instance_name_optContext } from "./GLSLParser";
 import { Layout_defaultsContext } from "./GLSLParser";
+import { Preprocessor_statementContext } from "./GLSLParser";
 
 
 /**
@@ -118,17 +118,6 @@ export interface GLSLListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	exitPragma_statement?: (ctx: Pragma_statementContext) => void;
-
-	/**
-	 * Enter a parse tree produced by `GLSLParser.extension_statement_list`.
-	 * @param ctx the parse tree
-	 */
-	enterExtension_statement_list?: (ctx: Extension_statement_listContext) => void;
-	/**
-	 * Exit a parse tree produced by `GLSLParser.extension_statement_list`.
-	 * @param ctx the parse tree
-	 */
-	exitExtension_statement_list?: (ctx: Extension_statement_listContext) => void;
 
 	/**
 	 * Enter a parse tree produced by `GLSLParser.extension_statement`.
@@ -1185,5 +1174,16 @@ export interface GLSLListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	exitLayout_defaults?: (ctx: Layout_defaultsContext) => void;
+
+	/**
+	 * Enter a parse tree produced by `GLSLParser.preprocessor_statement`.
+	 * @param ctx the parse tree
+	 */
+	enterPreprocessor_statement?: (ctx: Preprocessor_statementContext) => void;
+	/**
+	 * Exit a parse tree produced by `GLSLParser.preprocessor_statement`.
+	 * @param ctx the parse tree
+	 */
+	exitPreprocessor_statement?: (ctx: Preprocessor_statementContext) => void;
 }
 

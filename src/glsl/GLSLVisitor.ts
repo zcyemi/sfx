@@ -4,7 +4,6 @@
 import { ParseTreeVisitor } from "antlr4ts/tree/ParseTreeVisitor";
 
 import { Pragma_statementContext } from "./GLSLParser";
-import { Extension_statement_listContext } from "./GLSLParser";
 import { Extension_statementContext } from "./GLSLParser";
 import { External_declaration_listContext } from "./GLSLParser";
 import { Variable_identifierContext } from "./GLSLParser";
@@ -101,6 +100,7 @@ import { Basic_interface_blockContext } from "./GLSLParser";
 import { Interface_qualifierContext } from "./GLSLParser";
 import { Instance_name_optContext } from "./GLSLParser";
 import { Layout_defaultsContext } from "./GLSLParser";
+import { Preprocessor_statementContext } from "./GLSLParser";
 
 
 /**
@@ -117,13 +117,6 @@ export interface GLSLVisitor<Result> extends ParseTreeVisitor<Result> {
 	 * @return the visitor result
 	 */
 	visitPragma_statement?: (ctx: Pragma_statementContext) => Result;
-
-	/**
-	 * Visit a parse tree produced by `GLSLParser.extension_statement_list`.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	visitExtension_statement_list?: (ctx: Extension_statement_listContext) => Result;
 
 	/**
 	 * Visit a parse tree produced by `GLSLParser.extension_statement`.
@@ -796,5 +789,12 @@ export interface GLSLVisitor<Result> extends ParseTreeVisitor<Result> {
 	 * @return the visitor result
 	 */
 	visitLayout_defaults?: (ctx: Layout_defaultsContext) => Result;
+
+	/**
+	 * Visit a parse tree produced by `GLSLParser.preprocessor_statement`.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	visitPreprocessor_statement?: (ctx: Preprocessor_statementContext) => Result;
 }
 

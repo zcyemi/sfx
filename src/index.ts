@@ -1,11 +1,13 @@
 import { ANTLRInputStream, CommonTokenStream } from 'antlr4ts';
 import * as fs from "fs";
+import { GLSLLexer } from './glsl/GLSLLexer';
+import { GLSLParser } from './glsl/GLSLParser';
+import { GLSLFormatter } from './GLSLFormatter';
 import { SFXLexer } from './sfx/SFXLexer';
 import { SFXParser } from './sfx/SFXParser';
 import { SFXSourceVisotor } from './SFXSourceVisotor';
-import { GLSLLexer } from './glsl/GLSLLexer';
-import { GLSLParser } from './glsl/GLSLParser';
 import { GLSLSourceVisitor } from './GLSLSourceVisitor';
+import { GLSLProcessor } from './GLSLProcessor';
 
 
 function sfxTest() {
@@ -30,10 +32,16 @@ function glslTest() {
 
     let parser = new GLSLParser(tokenstream);
 
-    let program = parser.external_declaration_list();
+    let glslprocessor = new GLSLProcessor(parser);
 
-    var visitor = new GLSLSourceVisitor();
-    visitor.visit(program);
+    glslprocessor.analysis();
+
+
+    glslprocessor.trimFunctions(["vertex"]);
+    
+
 }
+
+
 
 glslTest();

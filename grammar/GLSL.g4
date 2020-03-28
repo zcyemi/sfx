@@ -30,19 +30,12 @@ pragma_statement:
    | PRAGMA_INVARIANT_ALL EOL
    ;
 
-extension_statement_list:
-   | extension_statement_list extension_statement
-   ;
-
 extension_statement:
    EXTENSION extension_name=IDENTIFIER COLON extension_status=IDENTIFIER EOL
    ;
 
-external_declaration_list:
-   single=external_declaration
-   | prefix=external_declaration_list lastDecl=external_declaration
-   | prefix=external_declaration_list lastExtension=extension_statement
-   ;
+
+external_declaration_list: external_declaration+;
 
 variable_identifier:
    IDENTIFIER
@@ -672,6 +665,7 @@ external_declaration:
    | pragma_statement
    | layout_defaults
    | preprocessor_statement
+   | extension_statement
    ;
 
 function_definition:

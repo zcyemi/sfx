@@ -22,6 +22,8 @@ var compileCtx = new SFXCompilationCtx();
 let res = new SFXFileResolver(folderPath);
 res.updateCompileCtx(compileCtx);
 
+compileCtx.compile().then((r)=>{});
+
 let sfxWatcher = new SFXFileWatcher(folderPath);
 
 
@@ -60,7 +62,4 @@ sfxWatcher.onFileChange = async (data)=>{
     });
 
     let result = await compileCtx.compile();
-
-    console.log("compile result", result);
-    
 }

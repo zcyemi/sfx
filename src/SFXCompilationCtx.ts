@@ -59,17 +59,16 @@ class SFXFileInfo{
             this.hash = Utility.md5hash(newcontent);
         }
         this.isDirty = true;
-        this.content = this.content;
-
-        console.log('parse content',this.filename);
+        this.content = newcontent;
 
         return true;
     }
 
     public parseSource():Promise<{sfx:SFXSource,file:SFXFileInfo}>{
         var self =this;
-        return SFXTool.parse(this.content).then(val=>{
+        return SFXTool.parse(this.content,this.filename).then(val=>{
             self.source = val;
+            self.isDirty = false;
             return {sfx:val,file:self};
         });
     }
@@ -82,6 +81,8 @@ export class SFXCompilationCtx{
     
     private m_sourceFiles:Map<string,SFXFileInfo> = new Map();
     private m_includeFiles:Map<string,SFXFileInfo> = new Map();
+
+    private m_sourceSFX:Map<string,SFXSource> = new Map();
 
     private m_errorCallback:SFXErrorCallabck[] = [];
 
@@ -107,7 +108,6 @@ export class SFXCompilationCtx{
     }
 
     public updateSource(filename:string,content:string){
-        console.log(`update source [${filename}]`);
         var file = this.getSourceFile(filename);
         if(file == null){
             let sfxfile = new SFXFileInfo(filename,content);
@@ -156,16 +156,77 @@ export class SFXCompilationCtx{
                 if(!val.isDirty) return;
                 tasks.push(val.parseSource());
             });
-            let results = await Promise.all(tasks);
 
-            //check duplicated sfxsources;
+            let results:{sfx:SFXSource,file:SFXFileInfo}[] = null;
+            try{
+                results = await Promise.all(tasks);
+            }
+            catch(e){
+                res(false);
+                return;
+            }
 
+            // update sfx deps
+
+            let changedSFXIndex:string[] = [];
+            let changedSFXsource:SFXSource[] = results.map(r=>r.sfx);
+
+            changedSFXsource.map(s=>{
+                let fname = s.fileName;
+                changedSFXIndex.push(fname);
+                this.m_sourceSFX.set(fname,s);
+            });
+            
+            //measure all changed source;
+            var allsfx:Map<string,SFXSource[]> = new Map();
+            var processDep = (fname:string,sfx:SFXSource)=>{
+                let ary = allsfx.get(fname);
+                if(ary == null){
+                    ary = [];
+                    allsfx.set(fname,ary);
+                }
+
+                if(ary.includes(sfx)) return;
+                ary.push(sfx);
+            };
+
+            this.m_sourceSFX.forEach(sfx=>{
+                sfx.includes.forEach(inc=>{
+                    let incfname = inc.fullName;
+                    processDep(incfname,sfx);
+                });
+            });
+
+
+            let dirtySFX:SFXSource[] = changedSFXsource.concat();
+
+            let touchedFname:string[] = [];
+            
+            dirtySFX.forEach(sfx=>{
+                let fname = sfx.fileName;
+                if(touchedFname.includes(fname)) return;
+                touchedFname.push(fname);
+
+                let deps = allsfx.get(fname);
+                if(deps == null) return;
+                deps.map(t=>t.fileName).forEach(t=>{
+                    if(!touchedFname.includes(t)){
+                        touchedFname.push(t);
+                    }
+                })
+            });
+
+            this.log("touched sfx",touchedFname);
 
             // link all techniques
 
             res(true);
 
         })
+    }
+
+    private log(message?:any,...objs:any[]){
+        console.log(message,...objs);
     }
 
 }

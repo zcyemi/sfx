@@ -88,6 +88,21 @@ export class Utility{
         }
         return files;
     }
+
+    public static ArrayIntersect<T>(a:T[],b:T[]):T[]{
+
+        if(a == null || a.length == 0)return [];
+        if(b == null || b.length == 0) return [];
+
+        let ret = [];
+
+        a.forEach(t=>{
+            if(b.includes(t)){
+                ret.push(t);
+            }
+        });
+        return ret;
+    }
 }
 
 

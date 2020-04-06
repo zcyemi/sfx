@@ -1,4 +1,4 @@
-import { APIResult } from "./Utility";
+import { APIResult, Utility } from "./Utility";
 import { ANTLRInputStream, CommonTokenStream } from "antlr4ts";
 import { GLSLLexer } from "./glsl/GLSLLexer";
 import { SFXLexer } from "./sfx/SFXLexer";
@@ -53,12 +53,28 @@ export class SFXSource{
         if(this.techniques == null) return null;
         return this.techniques.find(t=>t.name === name);
     }
+
+    public containsInclude(fullname:string):boolean{
+        const includes = this.includes;
+        if(includes == null || includes.length == 0) return false;
+
+        let includesInd = includes.map(inc=>inc.fullName);
+        return includesInd.includes(fullname);
+    }
+
+    public containsIncludes(fullname:string[]):boolean{
+        const includes = this.includes;
+        if(includes == null || includes.length == 0) return false;
+
+        let includesInd = includes.map(inc=>inc.fullName);
+        return Utility.ArrayIntersect(includesInd,fullname).length >0;
+    }
 }
 
 
 export class SFXTool{
 
-    public static parse(source:string):Promise<SFXSource>{
+    public static parse(source:string,file:string):Promise<SFXSource>{
 
 
         return new Promise((res,rej)=>{
@@ -71,11 +87,29 @@ export class SFXTool{
             let lexer = new SFXLexer(inputstream);
             let tokenstream = new CommonTokenStream(lexer);
             let parse = new SFXParser(tokenstream);
-    
+
+            var hasError = false;
+            let errmsg = null;
+            parse.addErrorListener({
+                syntaxError:(rec,offsymbol,line,pos,msg,e)=>{
+                    hasError = true;
+                    errmsg = `sfx error: (${line}:${pos}) ${msg}  file:${file}`;
+                    console.error(errmsg);
+                }
+            })
+            
             let program = parse.program();
-            let visitor = new SFXSourceVisotor();
+
+            if(hasError){
+                rej(errmsg);
+                return;
+            }
     
+
+            let visitor = new SFXSourceVisotor();
+
             let sfxsource= visitor.visit(program);
+
             res(sfxsource);
         });
 

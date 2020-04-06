@@ -11,7 +11,6 @@ export class SFXFileResolver{
     }
 
     public updateCompileCtx(compileCtx:SFXCompilationCtx){
-
         let files = Utility.FileEntry(this.sourceDir,true);
         console.log(files);
 

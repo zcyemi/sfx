@@ -48,6 +48,7 @@ class SFXFileInfo{
     }
 
     public updateContent(newcontent:string):boolean{
+        newcontent = newcontent.replace(/[\r]/gm,'');
         if(newcontent.length== this.content.length){
             const newhash = Utility.md5hash(newcontent);
             if(newhash == this.hash){

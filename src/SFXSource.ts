@@ -196,7 +196,7 @@ export class SFXTool{
 
             glslsource = glslsource.trim();
             if(glslsource == ''){
-                res([]);
+                res([])
                 return;
             }
 

@@ -4,6 +4,7 @@ import { GLSLFormatter } from "./GLSLFormatter";
 import { GLSLSourceInfo, GLSLSourceVisitor } from "./GLSLSourceVisitor";
 import { ANTLRInputStream, CommonTokenStream } from "antlr4ts";
 import { GLSLLexer } from "./glsl/GLSLLexer";
+import { GLSLSegmentVisitor } from "./GLSLSource";
 
 
 export class GLSLProcessor{
@@ -44,7 +45,16 @@ export class GLSLProcessor{
                         msg = msg.substr(0,75);
                     }
                     errmsg = `glsl error: (${line}:${pos}) ${msg}  file:${filename}`;
-                    console.error([filename,errmsg,glsl]);
+
+                    
+                    let lineAry = glsl.split('\n');
+                    let lines = line > 0? line-1:line;
+                    let linee = line + 1 > lineAry.length? lineAry.length:line;
+
+                    let linectx  =lineAry.splice(lines,linee-lines+1);
+
+
+                    console.error([filename,errmsg,offsymbol,linectx.join('\n')]);
                 }
             });
             
@@ -60,9 +70,21 @@ export class GLSLProcessor{
             processor.m_parser = parse;
             processor.m_parseTree = parseTree;
 
+            processor.analysisSegments();
+
+            console.log('length',parseTree.text.length);
+
+
             res(processor);
             return true;
         });
+    }
+
+    public analysisSegments(){
+        let visitor = new GLSLSegmentVisitor();
+        visitor.visit(this.m_parseTree);
+
+        console.log(visitor.segments);
     }
 
     public analysis():GLSLSourceInfo{

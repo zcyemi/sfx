@@ -365,6 +365,7 @@ storage_qualifier:
    | VARYING
    | IN_TOK
    | OUT_TOK
+   | INOUT_TOK
    | UNIFORM
    | COHERENT
    | VOLATILE
@@ -663,8 +664,8 @@ external_declaration:
    function_definition
    | declaration
    | pragma_statement
-   | layout_defaults
    | preprocessor_statement
+   | layout_defaults
    | extension_statement
    ;
 
@@ -685,6 +686,7 @@ basic_interface_block:
 interface_qualifier:
    IN_TOK
    | OUT_TOK
+   | INOUT_TOK
    | UNIFORM
    | BUFFER
    ;
@@ -699,33 +701,33 @@ layout_defaults:
    layout_qualifier UNIFORM SEMICOLON
    | layout_qualifier IN_TOK SEMICOLON
    | layout_qualifier OUT_TOK SEMICOLON
+   | layout_qualifier INOUT_TOK SEMICOLON
    | layout_qualifier BUFFER SEMICOLON
 ;
 
 preprocessor_statement:
-    PREPROC_DEFINE
-   | PREPROC_IF
-   | PREPROC_IFDEF
-   | PREPROC_IFNDEF
-   | PREPROC_ELIF
-   | PREPROC_UNDEF
-   | PREPROC_ELSE
-   | PREPROC_ENDIF
+    PREPROC_DEFINE EOL
+   | PREPROC_IF EOL
+   | PREPROC_IFDEF EOL
+   | PREPROC_IFNDEF EOL
+   | PREPROC_ELIF EOL
+   | PREPROC_UNDEF EOL
+   | PREPROC_ELSE EOL
+   | PREPROC_ENDIF EOL
    ;
 
-PREPROC_DEFINE: PREPROC_PREFIX 'define' ~('\n'|'\r')+ EOL;
-PREPROC_IF: PREPROC_PREFIX 'if' [ \t]+ IDENTIFIER [ \t]* EOL;
-PREPROC_IFDEF: PREPROC_PREFIX 'ifdef' [ \t]+ IDENTIFIER [ \t]* EOL;
-PREPROC_IFNDEF: PREPROC_PREFIX 'ifndef' [ \t]+ IDENTIFIER [ \t]* EOL;
-PREPROC_ELIF: PREPROC_PREFIX 'elif' [ \t]+ IDENTIFIER [ \t]* EOL;
-PREPROC_UNDEF: PREPROC_PREFIX 'undef' [ \t]+ IDENTIFIER [ \t]* EOL;
-
-PREPROC_ELSE: PREPROC_PREFIX 'else' [ \t]* EOL;
-PREPROC_ENDIF: PREPROC_PREFIX 'endif' [ \t]* EOL;
-
+PREPROC_DEFINE: { this.ignoreNewLine = false; } '#define' ~('\n'|'\r')+;
+PREPROC_IF: { this.ignoreNewLine = false; } '#if' [ \t]+ IDENTIFIER;
+PREPROC_IFDEF: { this.ignoreNewLine = false; } '#ifdef' [ \t]+ IDENTIFIER;
+PREPROC_IFNDEF: { this.ignoreNewLine = false; }  '#ifndef' [ \t]+ IDENTIFIER;
+PREPROC_ELIF: { this.ignoreNewLine = false; } '#elif' [ \t]+ IDENTIFIER;
+PREPROC_UNDEF: { this.ignoreNewLine = false; } '#undef' [ \t]+ IDENTIFIER;
+PREPROC_ELSE: { this.ignoreNewLine = false; } '#else';
+PREPROC_ENDIF: { this.ignoreNewLine = false; } '#endif';
 
 
-PREPROC_PREFIX: { this.ignoreNewLine = false; } [ \t]*'#'[ \t]*;
+
+
 
 // DEFINE_FN_PARAM: '(' [\d\w, \t]+ ')'; 
 

@@ -34,14 +34,13 @@ sfxWatcher.onFileChange = async (data)=>{
     data.forEach(evt=>{
         const fname = evt.fileName;
         const fpath = Utility.PathCombine(folderPath,fname);
-        const fstat = fs.statSync(fpath);
-        
-        if(!fstat.isFile) return;
 
 
         switch(evt.type){
             case 'change':
             {
+                const fstat = fs.statSync(fpath);
+                if(!fstat.isFile()) return;
                 let file = fs.readFileSync(fpath,"utf8");
                 compileCtx.updateSource(fname,file);
             }
@@ -49,6 +48,8 @@ sfxWatcher.onFileChange = async (data)=>{
             case 'rename':
             {
                 if(fs.existsSync(fpath)){
+                    if(fs.statSync(fpath).isDirectory()) return;
+
                     let file = fs.readFileSync(fpath,"utf8");
                     compileCtx.updateSource(fname,file);
                 }

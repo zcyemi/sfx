@@ -5,6 +5,7 @@ import { SFXLexer } from "./sfx/SFXLexer";
 import { GLSLParser } from "./glsl/GLSLParser";
 import { SFXParser } from "./sfx/SFXParser";
 import { SFXSourceVisotor } from "./SFXSourceVisotor";
+import { SFXShaderTechnique } from "./SFXCompilationCtx";
 
 export class SFXTechniquePipeline{
     public queue?:string;
@@ -74,8 +75,7 @@ export class SFXSource{
 
 export class SFXTool{
 
-    public static parse(source:string,file:string):Promise<SFXSource>{
-
+    public static parseSFX(source:string,file:string):Promise<SFXSource>{
 
         return new Promise((res,rej)=>{
 
@@ -112,7 +112,92 @@ export class SFXTool{
 
             res(sfxsource);
         });
+    }
 
-        
+    private static extractDependency(sfx:SFXSource,deps?:Map<string,SFXSource>):Promise<string[]>{
+        return new Promise(async (res,rej)=>{
+            let deplist:string[] = [];
+
+            let result = await SFXTool.extractDependencyImpl(sfx,deplist,deps);
+
+            if(result){
+                res(deplist);
+            }
+            else{
+                rej(`Error: parse dep failed: ${sfx.fileName}`);
+            }
+
+
+        });
+
+    }
+
+    private static extractDependencyImpl(sfx:SFXSource,depList:string[],deps?:Map<string,SFXSource>):Promise<boolean>{
+        return new Promise(async (res,rej)=>{
+
+            let includes = sfx.includes;
+            if(includes == null || includes.length == 0){
+                res(true);
+                return null;
+            }
+
+            if(deps == null){
+                rej(`Error: sfxsource ${sfx.fileName} require deps: ${includes.map(t=>t.fullName)}`);
+                return;
+            }
+
+            for(let t=0;t<includes.length;t++){
+                const inc = includes[t];
+                let fname = inc.fullName;
+                if(depList.includes(fname)){
+                    res(true);
+                    return;
+                }
+
+                let depsfx = deps.get(fname);
+                if(depsfx == null){
+                    rej(`Error: sfxsource ${depsfx.fileName} require dep: ${inc.fullName}`);
+                    return;
+                }
+                if(!await this.extractDependencyImpl(depsfx,depList,deps)){
+                    rej(`Error: parse dep failed: ${fname}`);
+                    return;
+                }
+
+                depList.push(fname);
+            }
+            res(true);
+        });
+    }
+
+
+
+    public static parseTechnique(sfx:SFXSource,deps?:Map<string,SFXSource>):Promise<SFXShaderTechnique[]>{
+        return new Promise(async (res,rej)=>{
+
+            let depList = await SFXTool.extractDependency(sfx,deps);
+            console.log(sfx.fileName,depList);
+
+            let glslblocks:string[] = [];
+            if(depList!=null && depList.length >0){
+                depList.forEach(fname=>{
+
+                    let glsls =deps.get(fname).glslBlock;
+                    if(glsls!=null && glsls.length>0){
+                        glslblocks.push(...glsls);
+                    }
+
+                })
+            }
+            
+            let glslsource = glslblocks.join('\n');
+
+            res([]);
+
+        });
+    }
+
+    public static optimizeGLSL(glsl:string){
+
     }
 }

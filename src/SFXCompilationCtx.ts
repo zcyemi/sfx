@@ -1,4 +1,4 @@
-import { SFXSource, SFXTool } from "./SFXSource";
+import { SFXSource, SFXTool, SFXTechnique } from "./SFXSource";
 import { Utility } from "./Utility";
 
 
@@ -66,7 +66,7 @@ class SFXFileInfo{
 
     public parseSource():Promise<{sfx:SFXSource,file:SFXFileInfo}>{
         var self =this;
-        return SFXTool.parse(this.content,this.filename).then(val=>{
+        return SFXTool.parseSFX(this.content,this.filename).then(val=>{
             self.source = val;
             self.isDirty = false;
             return {sfx:val,file:self};
@@ -77,6 +77,10 @@ class SFXFileInfo{
 
 export type SFXErrorCallabck = (e:Error)=>void;
 
+export class SFXShaderTechnique extends SFXTechnique{
+    public glsl:string;
+}
+
 export class SFXCompilationCtx{
     
     private m_sourceFiles:Map<string,SFXFileInfo> = new Map();
@@ -85,6 +89,8 @@ export class SFXCompilationCtx{
     private m_sourceSFX:Map<string,SFXSource> = new Map();
 
     private m_errorCallback:SFXErrorCallabck[] = [];
+
+    public techniques:Map<string,SFXShaderTechnique> = new Map();
 
     public constructor(){
     }
@@ -191,6 +197,7 @@ export class SFXCompilationCtx{
             };
 
             this.m_sourceSFX.forEach(sfx=>{
+                if(sfx.includes == null) return;
                 sfx.includes.forEach(inc=>{
                     let incfname = inc.fullName;
                     processDep(incfname,sfx);
@@ -217,11 +224,29 @@ export class SFXCompilationCtx{
             });
 
             this.log("touched sfx",touchedFname);
-
             // link all techniques
 
-            res(true);
+            const techniques = this.techniques;
 
+            touchedFname.forEach(async sfxname=>{
+
+                let sfx = this.m_sourceSFX.get(sfxname);
+                
+                let sfxTechniques:SFXShaderTechnique[];
+                try{
+                    sfxTechniques = await SFXTool.parseTechnique(sfx,this.m_sourceSFX);
+                }catch(e){
+                    console.log(e);
+                    res(false);
+                    return;
+                }
+
+                sfxTechniques.forEach(t=>{
+                    techniques.set(t.name,t);
+                });
+            })
+
+            res(true);
         })
     }
 

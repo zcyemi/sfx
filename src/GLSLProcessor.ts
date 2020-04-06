@@ -2,6 +2,8 @@ import { ParseTree } from "antlr4ts/tree/ParseTree";
 import { GLSLParser } from "./glsl/GLSLParser";
 import { GLSLFormatter } from "./GLSLFormatter";
 import { GLSLSourceInfo, GLSLSourceVisitor } from "./GLSLSourceVisitor";
+import { ANTLRInputStream, CommonTokenStream } from "antlr4ts";
+import { GLSLLexer } from "./glsl/GLSLLexer";
 
 
 export class GLSLProcessor{
@@ -12,9 +14,55 @@ export class GLSLProcessor{
 
     public sourceInfo:GLSLSourceInfo;
 
-    public constructor(parser:GLSLParser){
-        this.m_parser = parser;
-        this.m_parseTree = parser.external_declaration_list();
+
+
+    public constructor(parser?:GLSLParser){
+        if(parser!=null){
+            this.m_parser = parser;
+            this.m_parseTree = parser.external_declaration_list();
+        }
+
+    }
+
+    public static parse(glsl:string,filename:string):Promise<GLSLProcessor>{
+
+        return new Promise((res,rej)=>{
+
+            let input = new ANTLRInputStream(glsl);
+
+            let lexer = new GLSLLexer(input);
+            let tokenstream = new CommonTokenStream(lexer);
+            let parse = new GLSLParser(tokenstream);
+
+            var hasError = false;
+            let errmsg = null;
+            parse.addErrorListener({
+                syntaxError:(rec,offsymbol,line,pos,msg,e)=>{
+                    hasError = true;
+
+                    if(msg.length > 75){
+                        msg = msg.substr(0,75);
+                    }
+                    errmsg = `glsl error: (${line}:${pos}) ${msg}  file:${filename}`;
+                    console.error([filename,errmsg,glsl]);
+                }
+            });
+            
+
+            let parseTree = parse.external_declaration_list();
+
+            if(hasError){
+                rej(errmsg);
+                return;
+            }
+
+            let processor= new GLSLProcessor();
+            processor.m_parser = parse;
+            processor.m_parseTree = parseTree;
+
+            res(processor);
+            return true;
+        });
     }
 
     public analysis():GLSLSourceInfo{

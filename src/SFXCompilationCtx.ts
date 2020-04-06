@@ -114,6 +114,7 @@ export class SFXCompilationCtx{
     }
 
     public updateSource(filename:string,content:string){
+
         var file = this.getSourceFile(filename);
         if(file == null){
             let sfxfile = new SFXFileInfo(filename,content);
@@ -236,7 +237,6 @@ export class SFXCompilationCtx{
                 try{
                     sfxTechniques = await SFXTool.parseTechnique(sfx,this.m_sourceSFX);
                 }catch(e){
-                    console.log(e);
                     res(false);
                     return;
                 }

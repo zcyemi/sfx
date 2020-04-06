@@ -6,6 +6,7 @@ import { GLSLParser } from "./glsl/GLSLParser";
 import { SFXParser } from "./sfx/SFXParser";
 import { SFXSourceVisotor } from "./SFXSourceVisotor";
 import { SFXShaderTechnique } from "./SFXCompilationCtx";
+import { GLSLProcessor } from "./GLSLProcessor";
 
 export class SFXTechniquePipeline{
     public queue?:string;
@@ -189,8 +190,26 @@ export class SFXTool{
 
                 })
             }
-            
+
+            glslblocks.push(...sfx.glslBlock);
             let glslsource = glslblocks.join('\n');
+
+            glslsource = glslsource.trim();
+            if(glslsource == ''){
+                res([]);
+                return;
+            }
+
+            let glslprocessor:GLSLProcessor;
+
+            try{
+                glslprocessor = await GLSLProcessor.parse(glslsource,sfx.fileName);
+            }
+            catch(e){
+                res([]);
+                return;
+            }
+
 
             res([]);
 

@@ -1,21 +1,10 @@
-import { ANTLRInputStream, CommonTokenStream } from 'antlr4ts';
 import * as fs from "fs";
-import { GLSLLexer } from './glsl/GLSLLexer';
-import { GLSLParser } from './glsl/GLSLParser';
-import { GLSLFormatter } from './GLSLFormatter';
-import { SFXLexer } from './sfx/SFXLexer';
-import { SFXParser } from './sfx/SFXParser';
-import { SFXSourceVisotor } from './SFXSourceVisotor';
-import { SFXFileWatcher } from './SFXFileWatcher';
 import { SFXCompilationCtx } from './SFXCompilationCtx';
-import { Utility } from './Utility';
 import { SFXFileResolver } from './SFXFileResolver';
-
-
-
+import { SFXFileWatcher } from './SFXFileWatcher';
+import { Utility } from './Utility';
 
 const watchPath = 'tests';
-
 const folderPath = Utility.GetAbsolutePath(watchPath)
 
 var compileCtx = new SFXCompilationCtx();

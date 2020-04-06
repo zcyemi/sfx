@@ -514,6 +514,7 @@ member_list:
 
 member_declaration:
    fully_specified_type struct_declarator_list SEMICOLON
+   | preprocessor_statement
    ;
 
 struct_declarator_list:
@@ -546,6 +547,7 @@ declaration_statement:
 statement:
    compound_statement
    | simple_statement
+   | preprocessor_statement
    ;
 
 simple_statement:

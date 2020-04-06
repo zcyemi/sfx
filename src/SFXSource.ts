@@ -1,3 +1,10 @@
+import { APIResult } from "./Utility";
+import { ANTLRInputStream, CommonTokenStream } from "antlr4ts";
+import { GLSLLexer } from "./glsl/GLSLLexer";
+import { SFXLexer } from "./sfx/SFXLexer";
+import { GLSLParser } from "./glsl/GLSLParser";
+import { SFXParser } from "./sfx/SFXParser";
+import { SFXSourceVisotor } from "./SFXSourceVisotor";
 
 export class SFXTechniquePipeline{
     public queue?:string;
@@ -45,5 +52,27 @@ export class SFXSource{
     public getTechnique(name:string):SFXTechnique{
         if(this.techniques == null) return null;
         return this.techniques.find(t=>t.name === name);
+    }
+}
+
+
+export class SFXTool{
+
+    public static parse(source:string):APIResult{
+
+        if(source == null){
+            return APIResult.error("source null");
+        }
+
+        let inputstream = new ANTLRInputStream(source);
+        let lexer = new SFXLexer(inputstream);
+        let tokenstream = new CommonTokenStream(lexer);
+        let parse = new SFXParser(tokenstream);
+
+        let program = parse.program();
+        let visitor = new SFXSourceVisotor();
+
+        let sfxsource= visitor.visit(program);
+        return APIResult.Success(sfxsource);
     }
 }

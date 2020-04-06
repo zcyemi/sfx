@@ -3,6 +3,7 @@ import { ErrorNode } from 'antlr4ts/tree/ErrorNode';
 import { Function_definitionContext, Function_headerContext, Init_declarator_listContext, Parameter_declarationContext, Single_declarationContext, Function_call_headerContext, Type_specifierContext, Struct_specifierContext, Member_declarationContext, Interface_blockContext } from './glsl/GLSLParser';
 import { GLSLVisitor } from './glsl/GLSLVisitor';
 import { Utility } from './Utility';
+import { GLSLFormatter } from './GLSLFormatter';
 
 
 export class GLSLSourceInfo {
@@ -37,6 +38,9 @@ export class FunctionDefinition {
 
 
 export class GLSLSourceVisitor extends AbstractParseTreeVisitor<any> implements GLSLVisitor<any> {
+
+
+    private formatter:GLSLFormatter = new GLSLFormatter();
 
     private functions: { [key: string]: FunctionDefinition } = {};
     private types:{[key:string]:TypeInfo} = {};
@@ -182,6 +186,9 @@ export class GLSLSourceVisitor extends AbstractParseTreeVisitor<any> implements 
         this.m_curTypeInfo = typeinfo;
         this.visitChildren(ctx);
         this.m_curTypeInfo = null;
+
+        console.log(this.formatter.visit(ctx));
+
     }
 
     visitInterface_block(ctx:Interface_blockContext){
@@ -199,6 +206,12 @@ export class GLSLSourceVisitor extends AbstractParseTreeVisitor<any> implements 
 
         this.visitChildren(ctx);
         this.m_curTypeInfo = null;
+
+
+        console.log(this.formatter.visit(ctx));
+
+
+
     }
 
 
@@ -216,6 +229,7 @@ export class GLSLSourceVisitor extends AbstractParseTreeVisitor<any> implements 
             info.type = type_specifier;
             typeinfo.members[identifier] = info;
         }
+
 
         this.visitChildren(ctx);
     }

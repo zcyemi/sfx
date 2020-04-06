@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import { type } from "os";
-import { Delayter } from "./Utility";
+import { Delayter, Utility } from "./Utility";
 
 
 export type SFXFileEvt = {type:string,fileName:string};
@@ -11,7 +11,7 @@ export class SFXFileWatcher{
 
     public onFileChange:(data:SFXFileEvt[])=>void;
 
-    private m_delayter: Delayter<SFXFileEvt> = new Delayter(100,(a,b)=>{
+    private m_delayter: Delayter<SFXFileEvt> = new Delayter(1000,(a,b)=>{
         return a.type == b.type && a.fileName == b.fileName;
     });
 
@@ -33,6 +33,6 @@ export class SFXFileWatcher{
     }
 
     private onFileEvt(evtType:string,fileName:string){
-        this.m_delayter.emit({type:evtType,fileName:fileName});
+        this.m_delayter.emit({type:evtType,fileName:Utility.PathFmt(fileName)});
     }
 }

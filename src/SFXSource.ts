@@ -58,21 +58,27 @@ export class SFXSource{
 
 export class SFXTool{
 
-    public static parse(source:string):APIResult{
+    public static parse(source:string):Promise<SFXSource>{
 
-        if(source == null){
-            return APIResult.error("source null");
-        }
 
-        let inputstream = new ANTLRInputStream(source);
-        let lexer = new SFXLexer(inputstream);
-        let tokenstream = new CommonTokenStream(lexer);
-        let parse = new SFXParser(tokenstream);
+        return new Promise((res,rej)=>{
 
-        let program = parse.program();
-        let visitor = new SFXSourceVisotor();
+            if(source == null){
+                return rej('source is null');
+            }
+    
+            let inputstream = new ANTLRInputStream(source);
+            let lexer = new SFXLexer(inputstream);
+            let tokenstream = new CommonTokenStream(lexer);
+            let parse = new SFXParser(tokenstream);
+    
+            let program = parse.program();
+            let visitor = new SFXSourceVisotor();
+    
+            let sfxsource= visitor.visit(program);
+            res(sfxsource);
+        });
 
-        let sfxsource= visitor.visit(program);
-        return APIResult.Success(sfxsource);
+        
     }
 }

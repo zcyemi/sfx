@@ -1,5 +1,5 @@
+import { SFXSource, SFXTool } from "./SFXSource";
 import { Utility } from "./Utility";
-import { SFXSource } from "./SFXSource";
 
 
 export interface SFXFile{
@@ -12,6 +12,8 @@ class SFXCompileResult{
     public success:boolean;
     public error:string;
     public data:any;
+
+    public sfxSource:SFXSource;
 
     public static success(data?:any){
         let ret = new SFXCompileResult();
@@ -33,9 +35,10 @@ class SFXFileInfo{
     filename:string;
     content:string;
     hash:string;
-    public isDirty:boolean;
 
-    public sfxSource:SFXSource;
+    public source:SFXSource;
+
+    public isDirty:boolean;
 
     public constructor(filename:string,content:string){
         this.filename = filename;
@@ -58,15 +61,16 @@ class SFXFileInfo{
         this.isDirty = true;
         this.content = this.content;
 
-        console.log('update content',this.filename);
+        console.log('parse content',this.filename);
 
         return true;
     }
 
-
-    public parseSource():Promise<SFXSource>{
-        return new Promise(res=>{
-            res(null);
+    public parseSource():Promise<{sfx:SFXSource,file:SFXFileInfo}>{
+        var self =this;
+        return SFXTool.parse(this.content).then(val=>{
+            self.source = val;
+            return {sfx:val,file:self};
         });
     }
 
@@ -76,8 +80,8 @@ export type SFXErrorCallabck = (e:Error)=>void;
 
 export class SFXCompilationCtx{
     
-    private m_sourceFiles:{[key:string]:SFXFileInfo} = {};
-    private m_includeFiles:{[key:string]:SFXFileInfo} = {};
+    private m_sourceFiles:Map<string,SFXFileInfo> = new Map();
+    private m_includeFiles:Map<string,SFXFileInfo> = new Map();
 
     private m_errorCallback:SFXErrorCallabck[] = [];
 
@@ -95,18 +99,19 @@ export class SFXCompilationCtx{
     }
 
     private getSourceFile(filename:string):SFXFileInfo{
-        return this.m_sourceFiles[filename];
+        return this.m_sourceFiles.get(filename);
     }
 
     private getIncludeFile(filename:string):SFXFileInfo{
-        return this.m_includeFiles[filename];
+        return this.m_includeFiles.get(filename);
     }
 
     public updateSource(filename:string,content:string){
+        console.log(`update source [${filename}]`);
         var file = this.getSourceFile(filename);
         if(file == null){
             let sfxfile = new SFXFileInfo(filename,content);
-            this.m_sourceFiles[filename] = sfxfile;
+            this.m_sourceFiles.set(filename,sfxfile); 
         }
         else{
             file.updateContent(content);
@@ -121,7 +126,11 @@ export class SFXCompilationCtx{
         
     }
 
+    private getSources(){
+    }
+
     public updateSources(files:SFXFile[]){
+        if(files == null)return;
         files.forEach(f=>this.updateSource(f.filename,f.content));
     }
 
@@ -129,7 +138,7 @@ export class SFXCompilationCtx{
         var inc = this.getIncludeFile(filename);
         if(inc == null){
             let sfxfile= new SFXFileInfo(filename,content);
-            this.m_includeFiles[filename] = sfxfile;
+            this.m_includeFiles.set(filename,sfxfile);
         }else{
             inc.updateContent(content);
         }
@@ -139,8 +148,24 @@ export class SFXCompilationCtx{
         files.forEach(f=>this.updateInclude(f.filename,f.content));
     }
 
-    public compile(){
+    public compile():Promise<boolean>{
 
+        return new Promise<boolean>(async (res,rej)=>{
+            let tasks:Promise<{sfx:SFXSource,file:SFXFileInfo}>[] = [];
+            this.m_sourceFiles.forEach((val,key)=>{
+                if(!val.isDirty) return;
+                tasks.push(val.parseSource());
+            });
+            let results = await Promise.all(tasks);
+
+            //check duplicated sfxsources;
+
+
+            // link all techniques
+
+            res(true);
+
+        })
     }
 
 }

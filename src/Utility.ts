@@ -1,5 +1,6 @@
 var md5 = require('md5');
 import * as process from 'process';
+import * as fs from 'fs';
 
 export class APIResult{
     public success:boolean;
@@ -40,9 +41,14 @@ export class Utility{
         for(let t=1;t<pathes.length;t++){
             pathes[t] = pathes[t].replace(/^[\/\\]*/,'');
         }
-
-        return pathes.join('/').replace(/\\/gm,'/');
+        return Utility.PathFmt(pathes.join('/'));
     }
+
+    public static PathFmt(path:string):string{
+        if(path == null) return null;
+        return path.replace(/\\/gm,'/');
+    }
+
     public static GetAbsolutePath(path:string,basePath?:string){
         if(basePath != null){
             return Utility.PathCombine(basePath,path);
@@ -50,6 +56,37 @@ export class Utility{
         else{
             return Utility.PathCombine(process.cwd(),path);
         }
+    }
+
+    public static FileRead(fpath:string):string{
+        return fs.readFileSync(fpath,"utf8");
+    }
+
+    public static FileEntry(dir:string,recursive:boolean = false):string[]{
+        let fdir= Utility.PathFmt(dir);
+        const dirlen = fdir.length;
+        return Utility.FileEntryImpl(dir,recursive).map(f=>f.substr(dirlen).replace(/^\//,''));
+    }
+
+    private static FileEntryImpl(dir:string,recursive:boolean = false):string[]{
+        let files:string[] = [];
+        let dirent:fs.Dirent[] = fs.readdirSync(dir,{withFileTypes:true});
+        if(dirent!=null && dirent.length>0){
+            dirent.forEach(d=>{
+                if(d.isDirectory()){
+                    if(recursive){
+                        let subfiles = Utility.FileEntryImpl(Utility.PathCombine(dir,d.name),recursive);
+                        if(subfiles.length >0){
+                            files.push(...subfiles);
+                        }
+                    }
+                }
+                else if(d.isFile()){
+                    files.push(Utility.PathCombine(dir,d.name));
+                }
+            })
+        }
+        return files;
     }
 }
 

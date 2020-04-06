@@ -9,6 +9,7 @@ import { SFXSourceVisotor } from './SFXSourceVisotor';
 import { SFXFileWatcher } from './SFXFileWatcher';
 import { SFXCompilationCtx } from './SFXCompilationCtx';
 import { Utility } from './Utility';
+import { SFXFileResolver } from './SFXFileResolver';
 
 
 
@@ -17,16 +18,18 @@ const watchPath = 'tests';
 
 const folderPath = Utility.GetAbsolutePath(watchPath)
 
+var compileCtx = new SFXCompilationCtx();
+let res = new SFXFileResolver(folderPath);
+res.updateCompileCtx(compileCtx);
 
 let sfxWatcher = new SFXFileWatcher(folderPath);
 
-var compileCtx = new SFXCompilationCtx();
 
-sfxWatcher.onFileChange = (data)=>{
+sfxWatcher.onFileChange = async (data)=>{
     if(data == null || data.length ==0) return;
 
-    data.forEach(evt=>{
 
+    data.forEach(evt=>{
         const fname = evt.fileName;
         const fpath = Utility.PathCombine(folderPath,fname);
         const fstat = fs.statSync(fpath);
@@ -55,5 +58,9 @@ sfxWatcher.onFileChange = (data)=>{
         }
 
     });
+
+    let result = await compileCtx.compile();
+
+    console.log("compile result", result);
     
 }

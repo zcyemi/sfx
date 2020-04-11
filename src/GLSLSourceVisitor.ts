@@ -24,7 +24,7 @@ export class VariableInfo {
 export class TypeInfo{
     public typename:string;
     public members:{[key:string]:VariableInfo} = {};
-    public sepcifier:string;
+    public specifier:string;
 }
 
 
@@ -178,7 +178,7 @@ export class GLSLSourceVisitor extends AbstractParseTreeVisitor<any> implements 
         let typeinfo = new TypeInfo();
         let identifier= ctx.IDENTIFIER().text;
         typeinfo.typename = identifier;
-        typeinfo.sepcifier=ctx.STRUCT().text;
+        typeinfo.specifier=ctx.STRUCT().text;
 
         this.types[identifier] = typeinfo;
 
@@ -198,8 +198,8 @@ export class GLSLSourceVisitor extends AbstractParseTreeVisitor<any> implements 
         let block = ctx.basic_interface_block();
         let id = block.IDENTIFIER().text;
 
-        let sepcifier = block.interface_qualifier().text;
-        typeinfo.sepcifier = sepcifier;
+        let specifier = block.interface_qualifier().text;
+        typeinfo.specifier = specifier;
 
         typeinfo.typename = id;
         this.types[id] = typeinfo;
@@ -229,8 +229,6 @@ export class GLSLSourceVisitor extends AbstractParseTreeVisitor<any> implements 
             info.type = type_specifier;
             typeinfo.members[identifier] = info;
         }
-
-
         this.visitChildren(ctx);
     }
 

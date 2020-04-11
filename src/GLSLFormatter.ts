@@ -1,4 +1,4 @@
-import { External_declaration_listContext, Builtin_type_specifier_nonarrayContext } from "./glsl/GLSLParser";
+import { External_declaration_listContext, Builtin_type_specifier_nonarrayContext, Struct_specifierContext } from "./glsl/GLSLParser";
 import { AbstractParseTreeVisitor } from "antlr4ts/tree/AbstractParseTreeVisitor";
 import { GLSLVisitor } from "./glsl/GLSLVisitor";
 import { ParseTree } from "antlr4ts/tree/ParseTree";
@@ -12,6 +12,14 @@ const KEYWORD_WS:string[] =[
 ]
 
 export class GLSLFormatter extends AbstractParseTreeVisitor<string> implements GLSLVisitor<string> {
+
+    public defineTypes:string[] = [];
+
+    public registerType(type:string){
+        if(this.defineTypes.includes(type)) return;
+        this.defineTypes.push(type);
+    }
+
     protected defaultResult(): string {
         return "";
     }
@@ -22,7 +30,7 @@ export class GLSLFormatter extends AbstractParseTreeVisitor<string> implements G
 
     visitTerminal(ctx:TerminalNode):string{
         const text = ctx.text;
-        if(KEYWORD_WS.includes(text)) return text +' ';
+        if(KEYWORD_WS.includes(text) || this.defineTypes.includes(text)) return text +' ';
         return text;
     }
 
@@ -30,5 +38,6 @@ export class GLSLFormatter extends AbstractParseTreeVisitor<string> implements G
     aggregateResult(aggregate: string, nextResult: string): string{
         return aggregate + nextResult;
     }
+    
 
 }

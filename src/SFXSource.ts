@@ -1,12 +1,11 @@
-import { APIResult, Utility } from "./Utility";
 import { ANTLRInputStream, CommonTokenStream } from "antlr4ts";
-import { GLSLLexer } from "./glsl/GLSLLexer";
+import { GLSLTool } from "./GLSLProcessor";
+import { GLSLSource } from "./GLSLSource";
 import { SFXLexer } from "./sfx/SFXLexer";
-import { GLSLParser } from "./glsl/GLSLParser";
 import { SFXParser } from "./sfx/SFXParser";
-import { SFXSourceVisotor } from "./SFXSourceVisotor";
 import { SFXShaderTechnique } from "./SFXCompilationCtx";
-import { GLSLProcessor } from "./GLSLProcessor";
+import { SFXSourceVisotor } from "./SFXSourceVisotor";
+import { Utility } from "./Utility";
 
 export class SFXTechniquePipeline{
     public queue?:string;
@@ -171,8 +170,6 @@ export class SFXTool{
         });
     }
 
-
-
     public static parseTechnique(sfx:SFXSource,deps?:Map<string,SFXSource>):Promise<SFXShaderTechnique[]>{
         return new Promise(async (res,rej)=>{
 
@@ -200,10 +197,12 @@ export class SFXTool{
                 return;
             }
 
-            let glslprocessor:GLSLProcessor;
+            let source:GLSLSource = null;
 
             try{
-                glslprocessor = await GLSLProcessor.parse(glslsource,sfx.fileName);
+                source = await GLSLTool.parse(glslsource,sfx.fileName);
+                source = await GLSLTool.segment(source);
+                source = await GLSLTool.analysis(source);
             }
             catch(e){
                 res([]);

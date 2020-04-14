@@ -1,9 +1,7 @@
-import { External_declaration_listContext, Builtin_type_specifier_nonarrayContext, Struct_specifierContext } from "./glsl/GLSLParser";
 import { AbstractParseTreeVisitor } from "antlr4ts/tree/AbstractParseTreeVisitor";
-import { GLSLVisitor } from "./glsl/GLSLVisitor";
-import { ParseTree } from "antlr4ts/tree/ParseTree";
 import { TerminalNode } from "antlr4ts/tree/TerminalNode";
-
+import { Builtin_type_specifier_nonarrayContext } from "./glsl/GLSLParser";
+import { GLSLVisitor } from "./glsl/GLSLVisitor";
 
 const KEYWORD_WS:string[] =[
     'struct','return','uniform',
@@ -34,10 +32,7 @@ export class GLSLFormatter extends AbstractParseTreeVisitor<string> implements G
         return text;
     }
 
-
     aggregateResult(aggregate: string, nextResult: string): string{
         return aggregate + nextResult;
     }
-    
-
 }

@@ -2,6 +2,15 @@ import { ANTLRInputStream, CommonTokenStream } from "antlr4ts";
 import { GLSLLexer } from "./glsl/GLSLLexer";
 import { GLSLParser } from "./glsl/GLSLParser";
 import { GLSLAnalysisVisitor, GLSLSegmentVisitor, GLSLSource } from "./GLSLSource";
+import { Utility } from "./Utility";
+import * as fs from "fs";
+import os from 'os';
+import * as childProcess from 'child_process';
+
+const PATH_TEMP_SFX = Utility.PathCombine(os.tmpdir(),'sfx-cache');
+
+
+
 
 export class GLSLTool{
 
@@ -92,5 +101,40 @@ export class GLSLTool{
             pendingFunctions = [];
         }
         return functionTouched;
+    }
+
+
+    private static glslVerifyGetTempFolder(){
+        return 
+    }
+
+    public static glslVerifyClearCache(){
+
+    }
+
+    public static glslVerify(source:GLSLSource):Promise<boolean>{
+        let fmtFileName = source.fileName.replace('/','_');
+        let fullpath = Utility.PathCombine(PATH_TEMP_SFX,fmtFileName);
+
+        if(!fs.existsSync(PATH_TEMP_SFX)){
+            fs.mkdirSync(PATH_TEMP_SFX);
+        }
+
+        fs.writeFileSync(fullpath,source.source);
+
+        console.log(fullpath);
+
+        const glslangBin = Utility.GetAbsolutePath('tools/glslangValidator.exe');
+
+        return new Promise((res,rej)=>{
+            childProcess.exec(`${glslangBin} ${fullpath}`, (error, stdout, stderr) => {
+
+                let suc = error == null && stdout == '' && stderr == '';
+                if (stdout != '') console.log(`[${source.fileName}]`,stdout);
+                if (stderr != '') console.error(`[${source.fileName}]`,stderr);
+                if(!suc) console.error(fullpath);
+                res(suc);
+            });
+        });
     }
 }

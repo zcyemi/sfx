@@ -1,5 +1,5 @@
 import { ANTLRInputStream, CommonTokenStream } from "antlr4ts";
-import { GLSLTool } from "./GLSLProcessor";
+import { GLSLTool } from "./GLSLTool";
 import { GLSLSource } from "./GLSLSource";
 import { SFXLexer } from "./sfx/SFXLexer";
 import { SFXParser } from "./sfx/SFXParser";
@@ -66,28 +66,22 @@ export class SFXSource{
     public containsIncludes(fullname:string[]):boolean{
         const includes = this.includes;
         if(includes == null || includes.length == 0) return false;
-
         let includesInd = includes.map(inc=>inc.fullName);
         return Utility.ArrayIntersect(includesInd,fullname).length >0;
     }
 }
 
-
 export class SFXTool{
 
     public static parseSFX(source:string,file:string):Promise<SFXSource>{
-
         return new Promise((res,rej)=>{
-
             if(source == null){
                 return rej('source is null');
             }
-    
             let inputstream = new ANTLRInputStream(source);
             let lexer = new SFXLexer(inputstream);
             let tokenstream = new CommonTokenStream(lexer);
             let parse = new SFXParser(tokenstream);
-
             var hasError = false;
             let errmsg = null;
             parse.addErrorListener({
@@ -104,12 +98,9 @@ export class SFXTool{
                 rej(errmsg);
                 return;
             }
-    
 
             let visitor = new SFXSourceVisotor();
-
             let sfxsource= visitor.visit(program);
-
             res(sfxsource);
         });
     }
@@ -126,15 +117,11 @@ export class SFXTool{
             else{
                 rej(`Error: parse dep failed: ${sfx.fileName}`);
             }
-
-
         });
-
     }
 
     private static extractDependencyImpl(sfx:SFXSource,depList:string[],deps?:Map<string,SFXSource>):Promise<boolean>{
         return new Promise(async (res,rej)=>{
-
             let includes = sfx.includes;
             if(includes == null || includes.length == 0){
                 res(true);
@@ -203,6 +190,8 @@ export class SFXTool{
                 source = await GLSLTool.parse(glslsource,sfx.fileName);
                 source = await GLSLTool.segment(source);
                 source = await GLSLTool.analysis(source);
+
+                let valid = await GLSLTool.glslVerify(source);
             }
             catch(e){
                 res([]);

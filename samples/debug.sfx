@@ -3,7 +3,6 @@
 #include "basis.sfx"
 
 #GLSL
-
 precision mediump float;
 
 in vec4 aPosition;
@@ -11,7 +10,6 @@ void vertex(){
     vec4 pos = aPosition;
     gl_Position = MATRIX_MVP * pos;
 }
-
 inout vec2 vPos;
 
 void vertex_raw(){
@@ -23,15 +21,13 @@ void vertex_raw(){
 }
 
 
-uniform vec4 uColor: MAIN_COLOR;
+uniform vec4 uColor;
 
 out vec4 fragColor;
 void fragment(){
     fragColor = uColor;
 }
-
 #END
-
 
 technique debug{
     vs: vertex_raw;

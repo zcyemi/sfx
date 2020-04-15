@@ -1,16 +1,13 @@
-import { ANTLRInputStream, CommonTokenStream } from "antlr4ts";
+import { ANTLRInputStream, CommonTokenStream, ConsoleErrorListener } from "antlr4ts";
 import { GLSLLexer } from "./glsl/GLSLLexer";
 import { GLSLParser } from "./glsl/GLSLParser";
-import { GLSLAnalysisVisitor, GLSLSegmentVisitor, GLSLSource } from "./GLSLSource";
+import { GLSLAnalysisVisitor, GLSLSegmentVisitor, GLSLSource, GLSLSegmentType, GLSLShaderType } from "./GLSLSource";
 import { Utility } from "./Utility";
 import * as fs from "fs";
 import os from 'os';
 import * as childProcess from 'child_process';
 
 const PATH_TEMP_SFX = Utility.PathCombine(os.tmpdir(),'sfx-cache');
-
-
-
 
 export class GLSLTool{
 
@@ -70,7 +67,7 @@ export class GLSLTool{
         })
     }
 
-    public static trimFunctions(source:GLSLSource,entryFunctions:string[]):string[]{
+    public static analysisFunctions(source:GLSLSource,entryFunctions:string[]):string[]{
         let info = source;
         if(info == null) throw new Error('source not analysised');
 
@@ -103,6 +100,54 @@ export class GLSLTool{
         return functionTouched;
     }
 
+    public static trimFunctions(source:GLSLSource,functionsKeep:string[]):GLSLSource{
+        let functions = source.functions;
+        functionsKeep.forEach(f=>{
+            delete functions.f;
+        });
+
+        source.segments =  source.segments.filter(seg=>{
+            if(seg.segmentType == GLSLSegmentType.Function){
+                if(!functionsKeep.includes(seg.identifier)){
+                    return false;
+                }
+            }
+            return true;
+        });
+
+        source.source = null;
+        return source;
+    }
+
+    public static collapseToShader(source:GLSLSource,shaderType:GLSLShaderType,entry:string){
+        let segVaryings = source.segments.filter(seg=>{
+            return seg.segmentType == GLSLSegmentType.Declaration && seg.specifier == 'inout';
+        });
+
+
+        if(shaderType == GLSLShaderType.Vertex){
+            segVaryings.forEach(seg=>{
+                seg.specifier = 'out';
+                seg.update();
+            });
+        }
+        else{
+            segVaryings.forEach(seg=>{
+                seg.specifier = 'in';
+                seg.update();
+            });
+        }
+
+        source.segments.map(seg=>{
+            if(seg.segmentType == GLSLSegmentType.Function){
+                if(seg.identifier == entry){
+                    seg.identifier= 'main';
+                }
+            }
+        })
+
+        source.source = null;
+    }
 
     private static glslVerifyGetTempFolder(){
         return 
@@ -112,27 +157,29 @@ export class GLSLTool{
 
     }
 
-    public static glslVerify(source:GLSLSource):Promise<boolean>{
-        let fmtFileName = source.fileName.replace('/','_');
-        let fullpath = Utility.PathCombine(PATH_TEMP_SFX,fmtFileName);
-
+    public static async glslVerify(targetFile:string,source:GLSLSource):Promise<boolean>{
+        let fpath = Utility.PathCombine(PATH_TEMP_SFX,targetFile);
         if(!fs.existsSync(PATH_TEMP_SFX)){
             fs.mkdirSync(PATH_TEMP_SFX);
         }
 
-        fs.writeFileSync(fullpath,source.source);
+        let sourceCode = source.getSource();
+        sourceCode = '#version 300 es\n'+ sourceCode;
 
-        console.log(fullpath);
+
+        fs.writeFileSync(fpath,sourceCode);
+
+        console.log(fpath);
 
         const glslangBin = Utility.GetAbsolutePath('tools/glslangValidator.exe');
-
         return new Promise((res,rej)=>{
-            childProcess.exec(`${glslangBin} ${fullpath}`, (error, stdout, stderr) => {
-
+            childProcess.exec(`${glslangBin} ${fpath}`, (error, stdout, stderr) => {
                 let suc = error == null && stdout == '' && stderr == '';
-                if (stdout != '') console.log(`[${source.fileName}]`,stdout);
-                if (stderr != '') console.error(`[${source.fileName}]`,stderr);
-                if(!suc) console.error(fullpath);
+                if (stdout != '') console.log(`[${targetFile}] stdout:`,stdout);
+                if (stderr != '') console.error(`[${targetFile}] stderr:`,stderr);
+                if(!suc) console.error(fpath);
+
+                console.log(">>>",suc);
                 res(suc);
             });
         });

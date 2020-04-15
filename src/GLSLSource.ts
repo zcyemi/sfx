@@ -13,6 +13,11 @@ export enum GLSLSegmentType{
     Declaration,
 }
 
+export enum GLSLShaderType{
+    Vertex,
+    Fragment,
+}
+
 export class VariableInfo {
     type: string;
     identifier: string;
@@ -46,6 +51,16 @@ export class GLSLSegmentNode{
         this.segmentType = type;
         this.text = text;
     }
+
+    public update(){
+        switch(this.segmentType){
+            case GLSLSegmentType.Declaration:
+            if(this.specifier == 'in' || this.specifier == 'out'){
+                this.text = `${this.specifier} ${this.type} ${this.identifier};`;
+            }
+            break;
+        }
+    }
 }
 export class GLSLSource{
     public segments:GLSLSegmentNode[] = [];
@@ -62,6 +77,36 @@ export class GLSLSource{
         this.parser = parser;
         this.parser_root = parser_root;
     }
+
+    public getSource(){
+        if(this.source == null){
+            this.source = this.combineSegments();
+        }
+        return this.source;
+    }
+
+    public combineSegments():string{
+        return this.segments.map(seg=>{
+            let text = seg.text;
+            if(!text.endsWith('\n')){
+                return text +'\n';
+            }
+            return text;
+        }).join('');
+    }
+
+    public clone():GLSLSource{
+        let ret = new GLSLSource(null,null);
+        ret.segments = Utility.clone(this.segments);
+
+        ret.segments.forEach(s=>Object.setPrototypeOf(s,GLSLSegmentNode.prototype));
+        ret.functions = Utility.clone(this.functions);
+        ret.declaration = Utility.clone(this.declaration);
+        ret.types = Utility.clone(this.types);
+        ret.source = this.source;
+        ret.fileName = this.fileName;
+        return ret;
+    }
 }
 
 export class GLSLSegmentVisitor extends AbstractParseTreeVisitor<any> implements GLSLVisitor<any> {
@@ -69,7 +114,6 @@ export class GLSLSegmentVisitor extends AbstractParseTreeVisitor<any> implements
     private formatter:GLSLFormatter = new GLSLFormatter();
 
     private source:GLSLSource;
-
 
     public constructor(source:GLSLSource){
         super();
@@ -92,7 +136,6 @@ export class GLSLSegmentVisitor extends AbstractParseTreeVisitor<any> implements
 
     m_curNode:GLSLSegmentNode;
     visitFunction_definition(ctx:Function_definitionContext){
-
         let node = new GLSLSegmentNode(GLSLSegmentType.Function,this.formatter.visit(ctx));
         this.m_curNode = node;
         this.visitChildren(ctx.function_prototype());
@@ -115,7 +158,6 @@ export class GLSLSegmentVisitor extends AbstractParseTreeVisitor<any> implements
 
     visitInterface_block(ctx:Interface_blockContext){
         let node = new GLSLSegmentNode(GLSLSegmentType.Declaration,this.formatter.visit(ctx));
-
         let block = ctx.basic_interface_block();
         let id = block.IDENTIFIER().text;
 
@@ -144,7 +186,12 @@ export class GLSLSegmentVisitor extends AbstractParseTreeVisitor<any> implements
         if(array ==null){
             let identifier =ctx.IDENTIFIER();
             if(identifier!=null){
-                let node = new GLSLSegmentNode(GLSLSegmentType.Declaration,this.formatter.visit(ctx));
+
+                let text = this.formatter.visit(ctx).trim();
+                if(!text.endsWith(';')){
+                    text = text+';';
+                }
+                let node = new GLSLSegmentNode(GLSLSegmentType.Declaration,text);
                 node.identifier=identifier.text;
                 let fulltype = ctx.fully_specified_type();
                 if(fulltype!=null){

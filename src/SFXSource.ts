@@ -1,6 +1,6 @@
 import { ANTLRInputStream, CommonTokenStream } from "antlr4ts";
 import { GLSLTool } from "./GLSLTool";
-import { GLSLSource } from "./GLSLSource";
+import { GLSLSource, GLSLShaderType } from "./GLSLSource";
 import { SFXLexer } from "./sfx/SFXLexer";
 import { SFXParser } from "./sfx/SFXParser";
 import { SFXShaderTechnique } from "./SFXCompilationCtx";
@@ -190,14 +190,33 @@ export class SFXTool{
                 source = await GLSLTool.parse(glslsource,sfx.fileName);
                 source = await GLSLTool.segment(source);
                 source = await GLSLTool.analysis(source);
-
-                let valid = await GLSLTool.glslVerify(source);
             }
             catch(e){
                 res([]);
                 return;
             }
 
+            let techniques = sfx.techniques;
+
+            let tasks:Promise<boolean>[] = [];
+
+            if(techniques!=null){
+                techniques.forEach(t=>{
+                    let funcTouchedVS = GLSLTool.analysisFunctions(source,[t.vsEntry]);
+                    let funcTouchedPS = GLSLTool.analysisFunctions(source,[t.psEntry]);
+                    let srcVS = GLSLTool.trimFunctions(source.clone(),funcTouchedVS);
+                    let srcPS = GLSLTool.trimFunctions(source.clone(),funcTouchedPS);
+    
+                    GLSLTool.collapseToShader(srcVS,GLSLShaderType.Vertex,t.vsEntry);
+                    GLSLTool.collapseToShader(srcPS,GLSLShaderType.Fragment,t.psEntry);
+    
+                    tasks.push(GLSLTool.glslVerify(source.fileName+'.vert',srcVS));
+                    tasks.push(GLSLTool.glslVerify(source.fileName+'.frag',srcPS));
+                })
+            }
+
+            let results = await Promise.all(tasks);
+            console.log(results);
 
             res([]);
 

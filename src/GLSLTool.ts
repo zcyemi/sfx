@@ -108,23 +108,36 @@ export class GLSLTool{
         for (const key in functions) {
             if (functions.hasOwnProperty(key)) {
                 const element = functions[key];
-                let variabelsRef = element.variableRef;
-                variabelsRef.forEach(v=>{
-                    Utility.ArrayInsert(touchedVaraibles,v);
-                })
+                touchedVaraibles.push(element.funcId);
             }
         }
-
         //Resolve Defines
 
-        let defineVaraMap:{[key:string]:string[]} = {};
+        let allVariables:string[] = [];
+        let validSegmentsType:GLSLSegmentType[] = [GLSLSegmentType.Declaration, GLSLSegmentType.Function, GLSLSegmentType.Preprocessor];
+        source.segments.forEach(seg=>{
+            if(validSegmentsType.includes(seg.segmentType)){
+                Utility.ArrayInsert(allVariables,seg.identifier);
+            }
+        })
 
-        let defines = source.define;
-        for (const key in defines) {
-            if (defines.hasOwnProperty(key)) {
-                const define = defines[key];
+        var funcGetDep = function(segIdentifier:string):string[]{
+            let seg = source.getSegment(segIdentifier);
+            if(seg == null) return null;
+
+            switch(seg.segmentType){
+                case GLSLSegmentType.Function:
+                    return source.functions[segIdentifier].variableRef;
+                case GLSLSegmentType.Preprocessor:
+                    let define = source.define[segIdentifier];
+                    if(define == null) define = source.defineFunction[segIdentifier];
+                    if(define == null) return null;
+                    return define.parameterRef;
             }
         }
+
+        let resultTouched = Utility.ResolveDeps(touchedVaraibles,allVariables,funcGetDep);
+     
     }
 
     public static trimFunctions(source:GLSLSource,functionsKeep:string[]):GLSLSource{

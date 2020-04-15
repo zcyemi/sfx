@@ -41,6 +41,42 @@ export class Utility{
         ary.push(obj);
     }
 
+    public static ArrayConcatDistainct<T>(ary:T[],b:T[]){
+        b.forEach(obj=>{
+            if(obj == null) return;
+            if(ary.indexOf(obj) >=0) return;
+            ary.push(obj);
+        })
+    }
+
+    public static ResolveDeps(startItems:string[],allItems:string[],funcGetDep:(item:string)=>string[]):string[]{
+        let depMap:Map<string,string[]> = new Map();
+        allItems.forEach(item=>{
+            let itemDep = funcGetDep(item);
+            if(itemDep == null || itemDep.length == 0)return;
+            depMap.set(item,itemDep);
+        })
+
+
+        let touchedItems:string[] = startItems.concat();
+        let pendingItems:string[] = startItems.concat();
+        let workingItems:string[] = [];
+
+        while(pendingItems.length>0){
+            pendingItems.forEach(t=>{
+                let ary = depMap.get(t);
+                if(ary == null) return;
+                ary.forEach(dep=>{
+                    if(touchedItems.includes(dep)) return;
+                    workingItems.push(dep);
+                })
+            })
+            Utility.ArrayConcatDistainct(touchedItems,workingItems);
+            pendingItems = workingItems;
+            workingItems = [];
+        }
+        return touchedItems;
+    }
 
     public static PathCombine(...subpath:string[]):string{
         let pathes = subpath.map(spath=>spath.replace(/[\/\\]*$/,''));

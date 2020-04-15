@@ -102,6 +102,7 @@ export class GLSLFunctionSegmentNode extends GLSLSegmentNode{
 
 export class GLSLSource{
     public segments:GLSLSegmentNode[] = [];
+    public segments_map:Map<string,GLSLSegmentNode>;
     public functions: { [key: string]: FunctionDefinition } = {};
     public declaration: {[key:string]:VariableInfo} = {};
     public types:{[key:string]:TypeInfo} = {};
@@ -126,6 +127,10 @@ export class GLSLSource{
         return this.source;
     }
 
+    public getSegment(identifier:string):GLSLSegmentNode{
+        return this.segments_map.get(identifier);
+    }
+
     public combineSegments():string{
         return this.segments.map(seg=>{
             let text = seg.text;
@@ -134,6 +139,14 @@ export class GLSLSource{
             }
             return text;
         }).join('');
+    }
+
+    public regenerageSegmentMap(){
+        let map = new Map<string,GLSLSegmentNode>();
+        this.segments.forEach(seg=>{
+            map.set(seg.identifier,seg);
+        });
+        this.segments_map = map;
     }
 
     public clone():GLSLSource{
@@ -146,6 +159,7 @@ export class GLSLSource{
         ret.types = Utility.clone(this.types);
         ret.source = this.source;
         ret.fileName = this.fileName;
+        ret.regenerageSegmentMap();
         return ret;
     }
 }
@@ -161,6 +175,7 @@ export class GLSLSegmentVisitor extends AbstractParseTreeVisitor<any> implements
         this.source = source;
         source.segments = this.segments;
         this.visit(source.parser_root);
+        source.regenerageSegmentMap();
     }
 
     protected defaultResult() {
@@ -171,6 +186,27 @@ export class GLSLSegmentVisitor extends AbstractParseTreeVisitor<any> implements
         let text = this.formatter.visit(ctx);
         let node = new GLSLPreprocessorSegmentNode(GLSLSegmentType.Preprocessor,text);
         this.segments.push(node);
+
+        let define = ctx.PREPROC_DEFINE();
+        if(define!=null){
+            let text = define.text;
+
+            let expr = text.substr(8).trim();
+            let splits = expr.split(' ').filter(t=>t!='');
+            let identifier = splits[0];
+            splits.splice(0,1);
+            let value = splits.join('');
+
+            let matchFunc =  identifier.match(/([\d\w_]+)\s*\((.+)\)/);
+            let isFunction = matchFunc!=null;
+
+            let defineInfo = new DefineInfo();
+            if(isFunction){
+                node.identifier = matchFunc[1];
+            }else{
+                node.identifier = identifier;
+            }
+        }
 
         this.visitChildren(ctx);
     }

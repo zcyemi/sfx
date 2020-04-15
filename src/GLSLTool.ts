@@ -56,6 +56,7 @@ export class GLSLTool{
     public static analysis(source:GLSLSource):Promise<GLSLSource>{
         return new Promise((res,rej)=>{
             let visitor = new GLSLAnalysisVisitor(source);
+            visitor.visit(source.parser_root);
             res(source);
         });
     }
@@ -98,6 +99,32 @@ export class GLSLTool{
             pendingFunctions = [];
         }
         return functionTouched;
+    }
+
+    public static analysisVariable(source:GLSLSource,variableRef:string[]){
+        let touchedVaraibles:string[] = [];
+        let functions = source.functions;
+
+        for (const key in functions) {
+            if (functions.hasOwnProperty(key)) {
+                const element = functions[key];
+                let variabelsRef = element.variableRef;
+                variabelsRef.forEach(v=>{
+                    Utility.ArrayInsert(touchedVaraibles,v);
+                })
+            }
+        }
+
+        //Resolve Defines
+
+        let defineVaraMap:{[key:string]:string[]} = {};
+
+        let defines = source.define;
+        for (const key in defines) {
+            if (defines.hasOwnProperty(key)) {
+                const define = defines[key];
+            }
+        }
     }
 
     public static trimFunctions(source:GLSLSource,functionsKeep:string[]):GLSLSource{
@@ -178,8 +205,6 @@ export class GLSLTool{
                 if (stdout != '') console.log(`[${targetFile}] stdout:`,stdout);
                 if (stderr != '') console.error(`[${targetFile}] stderr:`,stderr);
                 if(!suc) console.error(fpath);
-
-                console.log(">>>",suc);
                 res(suc);
             });
         });

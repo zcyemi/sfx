@@ -190,8 +190,12 @@ export class SFXTool{
                 source = await GLSLTool.parse(glslsource,sfx.fileName);
                 source = await GLSLTool.segment(source);
                 source = await GLSLTool.analysis(source);
+
+                GLSLTool.analysisVariable(source,[]);
+
             }
             catch(e){
+                console.log(e);
                 res([]);
                 return;
             }
@@ -199,6 +203,8 @@ export class SFXTool{
             let techniques = sfx.techniques;
 
             let tasks:Promise<boolean>[] = [];
+
+            let retTechniques:SFXShaderTechnique[] = [];
 
             if(techniques!=null){
                 techniques.forEach(t=>{
@@ -209,16 +215,36 @@ export class SFXTool{
     
                     GLSLTool.collapseToShader(srcVS,GLSLShaderType.Vertex,t.vsEntry);
                     GLSLTool.collapseToShader(srcPS,GLSLShaderType.Fragment,t.psEntry);
+
+
+                    let buildtechnique = new Promise<boolean>(async (res,rej)=>{
+
+                        let suc = GLSLTool.glslVerify(source.fileName+'.vert',srcVS);
+                        if(!suc){
+                            res(false);
+                        }
+
+                        suc = GLSLTool.glslVerify(source.fileName+'.frag',srcPS);
+
+                        if(suc){
+                            let technique:SFXShaderTechnique = new SFXShaderTechnique();
+                            technique.technique = t;
+                            technique.glsl_ps = srcPS.getSource();
+                            technique.glsl_vs = srcVS.getSource();
+                            retTechniques.push(technique);
+                        }
+                        
+                        res(suc);
+
+
+                    })
     
-                    tasks.push(GLSLTool.glslVerify(source.fileName+'.vert',srcVS));
-                    tasks.push(GLSLTool.glslVerify(source.fileName+'.frag',srcPS));
+                    tasks.push(buildtechnique);
                 })
             }
 
-            let results = await Promise.all(tasks);
-            console.log(results);
-
-            res([]);
+            await Promise.all(tasks);
+            res(retTechniques);
 
         });
     }

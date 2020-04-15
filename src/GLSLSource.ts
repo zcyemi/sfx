@@ -1,6 +1,6 @@
 import { AbstractParseTreeVisitor } from "antlr4ts/tree/AbstractParseTreeVisitor";
 import { ErrorNode } from "antlr4ts/tree/ErrorNode";
-import { DeclarationContext, External_declaration_listContext, Function_call_headerContext, Function_definitionContext, Function_headerContext, GLSLParser, Init_declarator_listContext, Interface_blockContext, Member_declarationContext, Parameter_declarationContext, Preprocessor_statementContext, Single_declarationContext, Struct_specifierContext, Type_specifierContext } from "./glsl/GLSLParser";
+import { DeclarationContext, External_declaration_listContext, Function_call_headerContext, Function_definitionContext, Function_headerContext, GLSLParser, Init_declarator_listContext, Interface_blockContext, Member_declarationContext, Parameter_declarationContext, Preprocessor_statementContext, Single_declarationContext, Struct_specifierContext, Type_specifierContext, ExpressionContext, Variable_identifierContext } from "./glsl/GLSLParser";
 import { GLSLVisitor } from "./glsl/GLSLVisitor";
 import { GLSLFormatter } from "./GLSLFormatter";
 import { Utility } from "./Utility";
@@ -24,6 +24,15 @@ export class VariableInfo {
     sepcifier?:string;
 }
 
+
+export class DefineInfo{
+    identifier:string;
+    parameterRef:string[];
+    functionRef:string[];
+}
+
+
+
 /**
  * Uniform Buffer or Struct
  */
@@ -37,7 +46,18 @@ export class FunctionDefinition {
     funcId: string;
     funcInvokes: string[] = [];
     variables: { [key: string]: VariableInfo } = {};
+    variableRef:string[] = [];
     parameterRef: string[] = [];
+
+    public getExternalVariable():string[]{
+        let ret = [];
+        this.parameterRef.forEach(p=>{
+            if(this.variables[p]==null){
+                ret.push(p);
+            }
+        });
+        return ret;
+    }
 }
 
 export class GLSLSegmentNode{
@@ -61,12 +81,33 @@ export class GLSLSegmentNode{
             break;
         }
     }
+
+    public getText(){
+        return this.text;
+    }
 }
+
+export class GLSLPreprocessorSegmentNode extends GLSLSegmentNode{
+
+}
+
+export class GLSLDeclarationSegmentNode extends GLSLSegmentNode{
+
+}
+
+export class GLSLFunctionSegmentNode extends GLSLSegmentNode{
+
+}
+
+
 export class GLSLSource{
     public segments:GLSLSegmentNode[] = [];
     public functions: { [key: string]: FunctionDefinition } = {};
     public declaration: {[key:string]:VariableInfo} = {};
     public types:{[key:string]:TypeInfo} = {};
+    public define:{[key:string]:DefineInfo} = {};
+    public defineFunction:{[key:string]:DefineInfo} = {};
+
     public source:string;
     public fileName:string;
 
@@ -128,7 +169,7 @@ export class GLSLSegmentVisitor extends AbstractParseTreeVisitor<any> implements
 
     visitPreprocessor_statement(ctx:Preprocessor_statementContext){
         let text = this.formatter.visit(ctx);
-        let node = new GLSLSegmentNode(GLSLSegmentType.Preprocessor,text);
+        let node = new GLSLPreprocessorSegmentNode(GLSLSegmentType.Preprocessor,text);
         this.segments.push(node);
 
         this.visitChildren(ctx);
@@ -136,7 +177,7 @@ export class GLSLSegmentVisitor extends AbstractParseTreeVisitor<any> implements
 
     m_curNode:GLSLSegmentNode;
     visitFunction_definition(ctx:Function_definitionContext){
-        let node = new GLSLSegmentNode(GLSLSegmentType.Function,this.formatter.visit(ctx));
+        let node = new GLSLFunctionSegmentNode(GLSLSegmentType.Function,this.formatter.visit(ctx));
         this.m_curNode = node;
         this.visitChildren(ctx.function_prototype());
         this.m_curNode = null;
@@ -149,7 +190,7 @@ export class GLSLSegmentVisitor extends AbstractParseTreeVisitor<any> implements
     }
 
     visitStruct_specifier(ctx:Struct_specifierContext){
-        let node = new GLSLSegmentNode(GLSLSegmentType.Declaration,this.formatter.visit(ctx));
+        let node = new GLSLDeclarationSegmentNode(GLSLSegmentType.Declaration,this.formatter.visit(ctx));
         node.identifier = ctx.IDENTIFIER().text;
         node.specifier = ctx.STRUCT().text;
         node.type = node.identifier;
@@ -157,7 +198,7 @@ export class GLSLSegmentVisitor extends AbstractParseTreeVisitor<any> implements
     }
 
     visitInterface_block(ctx:Interface_blockContext){
-        let node = new GLSLSegmentNode(GLSLSegmentType.Declaration,this.formatter.visit(ctx));
+        let node = new GLSLDeclarationSegmentNode(GLSLSegmentType.Declaration,this.formatter.visit(ctx));
         let block = ctx.basic_interface_block();
         let id = block.IDENTIFIER().text;
 
@@ -191,7 +232,7 @@ export class GLSLSegmentVisitor extends AbstractParseTreeVisitor<any> implements
                 if(!text.endsWith(';')){
                     text = text+';';
                 }
-                let node = new GLSLSegmentNode(GLSLSegmentType.Declaration,text);
+                let node = new GLSLDeclarationSegmentNode(GLSLSegmentType.Declaration,text);
                 node.identifier=identifier.text;
                 let fulltype = ctx.fully_specified_type();
                 if(fulltype!=null){
@@ -224,6 +265,8 @@ export class GLSLAnalysisVisitor extends AbstractParseTreeVisitor<any> implement
     private functions: { [key: string]: FunctionDefinition } = {};
     private types:{[key:string]:TypeInfo} = {};
     private declaration:{[key:string]:VariableInfo} = {};
+    private define:{[key:string]:DefineInfo} = {};
+    private defineFunction:{[key:string]:DefineInfo} = {};
     public sourceInfo: GLSLSource;
     public constructor(source:GLSLSource) {
         super();
@@ -232,6 +275,8 @@ export class GLSLAnalysisVisitor extends AbstractParseTreeVisitor<any> implement
         sourceInfo.functions = this.functions;
         sourceInfo.declaration = this.declaration;
         sourceInfo.types = this.types;
+        sourceInfo.define = this.define;
+        sourceInfo.defineFunction = this.defineFunction;
     }
 
     protected defaultResult() {
@@ -291,6 +336,100 @@ export class GLSLAnalysisVisitor extends AbstractParseTreeVisitor<any> implement
 
 
         this.visitChildren(ctx);
+    }
+
+    visitVariable_identifier(ctx:Variable_identifierContext){
+        let identifier = ctx.IDENTIFIER();
+
+        if(this.m_curFuncDef!=null){
+            this.functionDefAddVariableRef(identifier.text);
+        }
+
+        this.visitChildren(ctx);
+    }
+
+    private functionDefAddVariableRef(identifier:string){
+
+        let funcDef = this.m_curFuncDef;
+        if(identifier == funcDef.funcId) return;
+        let variableRef = funcDef.variableRef;
+        let functionInv = funcDef.funcInvokes;
+        if(funcDef.variables[identifier]!=null) return;
+        if(functionInv.indexOf(identifier) >=0) return;
+        if(variableRef.indexOf(identifier) < 0){
+            variableRef.push(identifier);
+        }
+    }
+
+    visitPreprocessor_statement(ctx:Preprocessor_statementContext){
+        let define = ctx.PREPROC_DEFINE();
+        if(define!=null){
+            let text = define.text;
+
+            let expr = text.substr(8).trim();
+            let splits = expr.split(' ').filter(t=>t!='');
+            let identifier = splits[0];
+            splits.splice(0,1);
+            let value = splits.join('');
+
+            let matchFunc =  identifier.match(/([\d\w_]+)\s*\((.+)\)/);
+            let isFunction = matchFunc!=null;
+
+            let defineInfo = new DefineInfo();
+            if(isFunction){
+                defineInfo.identifier = matchFunc[1];
+                this.defineFunction[defineInfo.identifier] = defineInfo;
+            }else{
+                defineInfo.identifier = identifier;
+                this.define[defineInfo.identifier] = defineInfo;
+            }
+
+            let funRef = [];
+            let varRef = [];
+            this.parseExpression(value,funRef,varRef);
+
+            defineInfo.functionRef = funRef;
+            defineInfo.parameterRef = varRef;
+
+        }
+    }
+
+    private parseExpression(text:string,funcRef:string[],variableRef:string[]){
+        text = text.trim();
+        let matchFunc =  text.match(/([\d\w_]+)\s*\((.+)\)/);
+
+        if(matchFunc!=null){
+            funcRef.push(matchFunc[1]);
+            this.parseExpression(matchFunc[2],funcRef,variableRef);
+            text = text.replace(matchFunc[0],"");
+            this.parseExpression(text,funcRef,variableRef);
+            return;
+        }
+
+        text = text.replace(/(\*|\+|,|-|\/)/gm,' ');
+
+        let subtext = text.split(' ').filter(t=>t!='');
+
+
+        subtext.forEach(t=>{
+            t = t.trim();
+            if(t.match(/^\d*(\.\d*)?$/gm)){
+                return;
+            };
+            if(t.indexOf('.')>=0){
+                let ts = t.split('.')[0];
+
+                if(variableRef.indexOf(ts) <0){
+                    variableRef.push(ts)
+                }
+                variableRef.push(ts[0]);
+            }
+            else{
+                variableRef.push(t);
+            }
+
+        })
+
     }
 
     private addDeclaration(ctx:Single_declarationContext){

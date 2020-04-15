@@ -79,7 +79,9 @@ class SFXFileInfo{
 export type SFXErrorCallabck = (e:Error)=>void;
 
 export class SFXShaderTechnique extends SFXTechnique{
-    public glsl:string;
+    public glsl_vs:string;
+    public glsl_ps:string;
+    public technique:SFXTechnique;
 }
 
 export class SFXCompilationCtx{

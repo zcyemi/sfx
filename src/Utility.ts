@@ -35,6 +35,13 @@ export class Utility{
         return md5(str);
     }
 
+    public static ArrayInsert<T>(ary:T[],obj:T){
+        if(obj == null) return;
+        if(ary.indexOf(obj) >=0) return;
+        ary.push(obj);
+    }
+
+
     public static PathCombine(...subpath:string[]):string{
         let pathes = subpath.map(spath=>spath.replace(/[\/\\]*$/,''));
 

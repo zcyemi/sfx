@@ -31,8 +31,6 @@ export class DefineInfo{
     functionRef:string[];
 }
 
-
-
 /**
  * Uniform Buffer or Struct
  */

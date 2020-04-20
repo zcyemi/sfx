@@ -209,8 +209,6 @@ export class GLSLTool{
 
         fs.writeFileSync(fpath,sourceCode);
 
-        console.log(fpath);
-
         const glslangBin = Utility.GetAbsolutePath('tools/glslangValidator.exe');
         return new Promise((res,rej)=>{
             childProcess.exec(`${glslangBin} ${fpath}`, (error, stdout, stderr) => {

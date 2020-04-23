@@ -6,10 +6,26 @@ import { Utility } from "./Utility";
 import * as fs from "fs";
 import os from 'os';
 import * as childProcess from 'child_process';
+import { GLSLFile } from "./GLSLFile";
+import { GLSLFileVisitor } from "./GLSLFileVisitor";
 
 const PATH_TEMP_SFX = Utility.PathCombine(os.tmpdir(),'sfx-cache');
 
 export class GLSLTool{
+
+
+    public static parseGLSLFile(glsl:string,filename:string):Promise<GLSLFile>{
+        return new Promise((res,rej)=>{
+            let input = new ANTLRInputStream(glsl);
+            let lexer = new GLSLLexer(input);
+            let tokenstream = new CommonTokenStream(lexer);
+            let parse = new GLSLParser(tokenstream);
+
+            var visitor = new GLSLFileVisitor();
+            visitor.visit(parse.external_declaration_list());
+            res(visitor.sourceFile);
+        });
+    }
 
     public static parse(glsl:string,filename:string):Promise<GLSLSource>{
         return new Promise((res,rej)=>{

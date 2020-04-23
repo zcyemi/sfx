@@ -1,5 +1,3 @@
-
-
 export enum GLSLSegType{
     Version,
     Declaration,
@@ -9,6 +7,13 @@ export enum GLSLSegType{
     Precision,
     Function,
 }
+
+export class GLSLVariableInfo{
+    public identifier:string;
+    public typeName:string;
+    public specifier:string;
+}
+
 
 export abstract class GLSLSeg{
     public segType:GLSLSegType;
@@ -77,13 +82,21 @@ export class GLSLSegPrecision extends GLSLSeg{
 export class GLSLSegFunction extends GLSLSeg{
     public identifier:string;
 
+    public variableDef:Map<string,GLSLVariableInfo> = new Map();
+    public variableRef:string[] = [];
+    public parameterDef:Map<string,GLSLVariableInfo> = new Map();
+
     public constructor(){
         super(GLSLSegType.Function);
+    }
+
+    public setParameter(identifier:string,info:GLSLVariableInfo){
+        this.parameterDef.set(identifier,info);
     }
 }
 
 export class GLSLFile{
-    public segments:GLSLSeg[];
+    public segments:GLSLSeg[] = [];
 
     public functions:Map<string,GLSLSegFunction> = new Map();
     public defineFunc:Map<string,GLSLSegPreprocDefine> = new Map();
@@ -93,7 +106,4 @@ export class GLSLFile{
 
     public declarationBlock:Map<string,GLSLSegDeclarationBlock> = new Map();
     public fileName:string;
-
 }
-
-

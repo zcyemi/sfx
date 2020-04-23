@@ -1,19 +1,22 @@
 import { AbstractParseTreeVisitor } from "antlr4ts/tree/AbstractParseTreeVisitor";
 import { GLSLVisitor } from "./glsl/GLSLVisitor";
-import { GLSLFile, GLSLSeg, GLSLSegPreprocCondition, GLSLSegPreprocDefine, GLSLSegFunction } from "./GLSLFile";
-import { Preprocessor_statementContext } from "./glsl/GLSLParser";
+import { GLSLFile, GLSLSeg, GLSLSegPreprocCondition, GLSLSegPreprocDefine, GLSLSegFunction, GLSLVariableInfo } from "./GLSLFile";
+import { Preprocessor_statementContext, Function_definitionContext, Function_headerContext, Parameter_declarationContext } from "./glsl/GLSLParser";
 import { GLSLFormatter } from "./GLSLFormatter";
-
 
 export class GLSLFileVisitor extends AbstractParseTreeVisitor<any> implements GLSLVisitor<any> {
     
     private source:GLSLFile = new GLSLFile();
+
+    public get sourceFile():GLSLFile{
+        return this.source;
+    }
     
     protected defaultResult() {
     }
 
     private pushSegNode(seg:GLSLSeg){
-
+        this.source.segments.push(seg);
     }
 
     private setFunc(funcIdentifier:string,seg:GLSLSegFunction){
@@ -21,13 +24,12 @@ export class GLSLFileVisitor extends AbstractParseTreeVisitor<any> implements GL
     }
 
     private setDefineFunc(funcIdentifier:string,seg:GLSLSegPreprocDefine){
-        this.source.functions.set(funcIdentifier,seg);
+        this.source.defineFunc.set(funcIdentifier,seg);
     }
 
     private setDefine(identifier:string,seg:GLSLSegPreprocDefine){
         this.source.define.set(identifier,seg);
     }
-
     
     visitPreprocessor_statement(ctx:Preprocessor_statementContext){
         let text = GLSLFormatter.instance.visit(ctx);
@@ -58,12 +60,48 @@ export class GLSLFileVisitor extends AbstractParseTreeVisitor<any> implements GL
         }
         else{
             let node = new GLSLSegPreprocCondition();
-            node.text;
+            node.text = text;
             this.pushSegNode(node);
         }
+        this.visitChildren(ctx);
+    }
+
+
+    //#region Functions
+
+    private m_curfuncSeg:GLSLSegFunction;
+
+    visitFunction_definition(ctx:Function_definitionContext){
+        let funcSeg = new GLSLSegFunction();
+        this.m_curfuncSeg = funcSeg;
+        this.visitChildren(ctx);
+        this.pushSegNode(funcSeg);
+        this.m_curfuncSeg = null;
+    }
+
+    visitFunction_header(ctx:Function_headerContext){
+        let curfunc = this.m_curfuncSeg;
+        let funcName = ctx.variable_identifier().text;
+        curfunc.identifier = funcName;
+        this.setFunc(funcName,curfunc);
+        this.visitChildren(ctx);
+    }
+
+    visitParameter_declaration(ctx:Parameter_declarationContext){
+        var dec = ctx.parameter_declarator();
+        var identifier = dec.IDENTIFIER().text;
+
+        var type_specifier = dec.type_specifier().text;
+
+        var info = new GLSLVariableInfo();
+        info.typeName = type_specifier;
+        info.identifier = identifier;
+        this.m_curfuncSeg.setParameter(identifier,info);
 
         this.visitChildren(ctx);
     }
-    
 
+
+
+    //#endregion
 }

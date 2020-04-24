@@ -14,6 +14,12 @@ export class GLSLVariableInfo{
     public specifier:string;
 }
 
+export class GLSLTypeInfo{
+    public typeName:string;
+    public member:GLSLVariableInfo[] =[];
+    public sepcifier:string;
+}
+
 
 export abstract class GLSLSeg{
     public segType:GLSLSegType;
@@ -45,6 +51,7 @@ export class GLSLSegDeclaration extends GLSLSeg{
 export class GLSLSegDeclarationBlock extends GLSLSeg{
     public typeName:string; 
     public identifier:string;
+    public typeInfo:GLSLTypeInfo;
 
     public constructor(){
         super(GLSLSegType.DeclarationBlock);
@@ -103,6 +110,7 @@ export class GLSLFile{
 
     public declaration:Map<string,GLSLSegDeclaration> = new Map();
     public define:Map<string,GLSLSegPreprocDefine> = new Map();
+    public defineTypes:Map<string,GLSLSegDeclarationBlock> = new Map();
 
     public declarationBlock:Map<string,GLSLSegDeclarationBlock> = new Map();
     public fileName:string;

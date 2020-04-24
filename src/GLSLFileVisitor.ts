@@ -1,8 +1,9 @@
 import { AbstractParseTreeVisitor } from "antlr4ts/tree/AbstractParseTreeVisitor";
 import { GLSLVisitor } from "./glsl/GLSLVisitor";
-import { GLSLFile, GLSLSeg, GLSLSegPreprocCondition, GLSLSegPreprocDefine, GLSLSegFunction, GLSLVariableInfo } from "./GLSLFile";
-import { Preprocessor_statementContext, Function_definitionContext, Function_headerContext, Parameter_declarationContext } from "./glsl/GLSLParser";
+import { GLSLFile, GLSLSeg, GLSLSegPreprocCondition, GLSLSegPreprocDefine, GLSLSegFunction, GLSLVariableInfo, GLSLSegDeclarationBlock, GLSLTypeInfo } from "./GLSLFile";
+import { Preprocessor_statementContext, Function_definitionContext, Function_headerContext, Parameter_declarationContext, Struct_specifierContext, Member_declarationContext, Type_specifierContext, Interface_blockContext } from "./glsl/GLSLParser";
 import { GLSLFormatter } from "./GLSLFormatter";
+import { VariableInfo, TypeInfo } from "./GLSLSource";
 
 export class GLSLFileVisitor extends AbstractParseTreeVisitor<any> implements GLSLVisitor<any> {
     
@@ -29,6 +30,22 @@ export class GLSLFileVisitor extends AbstractParseTreeVisitor<any> implements GL
 
     private setDefine(identifier:string,seg:GLSLSegPreprocDefine){
         this.source.define.set(identifier,seg);
+    }
+
+    private setType(identifier:string,seg:GLSLSegDeclarationBlock){
+        this.source.defineTypes.set(identifier,seg);
+    }
+
+    private getTypeIdentifier(type:Type_specifierContext):string{
+        let type_noarray = type.type_specifier_nonarray();
+
+        let buildIn =type_noarray.builtin_type_specifier_nonarray();
+        if(buildIn!=null){
+            return buildIn.text;
+        }
+        let identifier= type_noarray.IDENTIFIER();
+        if(identifier!=null) return identifier.text;
+        return type_noarray.struct_specifier().IDENTIFIER().text;
     }
     
     visitPreprocessor_statement(ctx:Preprocessor_statementContext){
@@ -97,11 +114,70 @@ export class GLSLFileVisitor extends AbstractParseTreeVisitor<any> implements GL
         info.typeName = type_specifier;
         info.identifier = identifier;
         this.m_curfuncSeg.setParameter(identifier,info);
-
         this.visitChildren(ctx);
     }
 
+    //#endregion
+
+    //#region 
+
+    private m_curDeclBlock:GLSLSegDeclarationBlock;
+    visitStruct_specifier(ctx:Struct_specifierContext){
+        let identifier = ctx.IDENTIFIER().text;
+
+        let typeInfo = new GLSLTypeInfo();
+        typeInfo.typeName = identifier;
+        typeInfo.sepcifier = "struct";
 
 
+        let seg = new GLSLSegDeclarationBlock();
+        seg.text = GLSLFormatter.instance.visit(ctx);
+        seg.typeName = identifier;
+        seg.typeInfo = typeInfo;
+
+        this.m_curDeclBlock = seg;
+        this.setType(identifier,seg);
+        this.pushSegNode(seg);
+        this.visitChildren(ctx);
+
+        this.m_curDeclBlock = null;
+    }
+
+    visitInterface_block(ctx:Interface_blockContext){
+        let text = GLSLFormatter.instance.visit(ctx);
+        let block = ctx.basic_interface_block();
+
+        let identifier = block.IDENTIFIER().text;
+        let specifier = block.interface_qualifier().text;
+
+        let typeInfo = new GLSLTypeInfo();
+        typeInfo.typeName = identifier;
+        typeInfo.sepcifier = specifier;
+
+        let seg = new GLSLSegDeclarationBlock();
+        seg.text = text;
+        seg.typeInfo = typeInfo;
+        seg.typeName = identifier;
+
+        this.setType(identifier,seg);
+        this.pushSegNode(seg);
+
+        this.m_curDeclBlock = seg;
+        this.visitChildren(ctx);
+        this.m_curDeclBlock = null;
+    }
+
+    visitMember_declaration(ctx:Member_declarationContext){
+        let declBlock = this.m_curDeclBlock;
+        if(declBlock!=null){
+            let type_specifier = this.getTypeIdentifier(ctx.fully_specified_type().type_specifier());
+            let identifier = ctx.struct_declarator_list().text;
+            let memberInfo =new GLSLVariableInfo();
+            memberInfo.identifier=  identifier;
+            memberInfo.typeName = type_specifier;
+            declBlock.typeInfo.member.push(memberInfo);
+        }
+        this.visitChildren(ctx);
+    }
     //#endregion
 }

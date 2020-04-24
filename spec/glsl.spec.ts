@@ -13,6 +13,6 @@ describe("glsl",()=>{
 
         var ret = await GLSLTool.parseGLSLFile(glsl,"sample.glsl");
 
-        console.log(ret);
+        console.log(ret.segments);
     });
 });

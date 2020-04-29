@@ -1,7 +1,7 @@
 import { AbstractParseTreeVisitor } from "antlr4ts/tree/AbstractParseTreeVisitor";
 import { GLSLVisitor } from "./glsl/GLSLVisitor";
-import { GLSLFile, GLSLSeg, GLSLSegPreprocCondition, GLSLSegPreprocDefine, GLSLSegFunction, GLSLVariableInfo, GLSLSegDeclarationBlock, GLSLTypeInfo } from "./GLSLFile";
-import { Preprocessor_statementContext, Function_definitionContext, Function_headerContext, Parameter_declarationContext, Struct_specifierContext, Member_declarationContext, Type_specifierContext, Interface_blockContext } from "./glsl/GLSLParser";
+import { GLSLFile, GLSLSeg, GLSLSegPreprocCondition, GLSLSegPreprocDefine, GLSLSegFunction, GLSLVariableInfo, GLSLSegDeclarationBlock, GLSLTypeInfo, GLSLSegDeclaration } from "./GLSLFile";
+import { Preprocessor_statementContext, Function_definitionContext, Function_headerContext, Parameter_declarationContext, Struct_specifierContext, Member_declarationContext, Type_specifierContext, Interface_blockContext, Single_declarationContext } from "./glsl/GLSLParser";
 import { GLSLFormatter } from "./GLSLFormatter";
 import { VariableInfo, TypeInfo } from "./GLSLSource";
 
@@ -36,6 +36,10 @@ export class GLSLFileVisitor extends AbstractParseTreeVisitor<any> implements GL
         this.source.defineTypes.set(identifier,seg);
     }
 
+    private setDeclaration(identifeir:string,seg:GLSLSegDeclaration){
+        this.source.declaration.set(identifeir,seg);
+    }
+
     private getTypeIdentifier(type:Type_specifierContext):string{
         let type_noarray = type.type_specifier_nonarray();
 
@@ -47,7 +51,8 @@ export class GLSLFileVisitor extends AbstractParseTreeVisitor<any> implements GL
         if(identifier!=null) return identifier.text;
         return type_noarray.struct_specifier().IDENTIFIER().text;
     }
-    
+
+    //#region Preprocessor
     visitPreprocessor_statement(ctx:Preprocessor_statementContext){
         let text = GLSLFormatter.instance.visit(ctx);
         let define = ctx.PREPROC_DEFINE();
@@ -83,6 +88,7 @@ export class GLSLFileVisitor extends AbstractParseTreeVisitor<any> implements GL
         this.visitChildren(ctx);
     }
 
+    //#endregion
 
     //#region Functions
 
@@ -119,7 +125,7 @@ export class GLSLFileVisitor extends AbstractParseTreeVisitor<any> implements GL
 
     //#endregion
 
-    //#region 
+    //#region blocks
 
     private m_curDeclBlock:GLSLSegDeclarationBlock;
     visitStruct_specifier(ctx:Struct_specifierContext){
@@ -179,5 +185,45 @@ export class GLSLFileVisitor extends AbstractParseTreeVisitor<any> implements GL
         }
         this.visitChildren(ctx);
     }
+    //#endregion
+
+    //#region Fields
+
+    visitSingle_declaration(ctx:Single_declarationContext){
+
+        let curFunc = this.m_curfuncSeg;
+        if(curFunc == null){
+            //global declaration
+            
+            let seg = new GLSLSegDeclaration();
+            seg.text = GLSLFormatter.instance.visit(ctx);
+
+            let arrray = ctx.array_specifier();
+            if(arrray != null){
+
+            }
+            else{
+                let identifeir = ctx.IDENTIFIER();
+                if(identifeir !=null){
+                    seg.identifier = identifeir.text;
+                    let fulltype = ctx.fully_specified_type();
+                    if(fulltype!=null){
+                        let specifier = fulltype.type_qualifier();
+                        let type = this.getTypeIdentifier(fulltype.type_specifier());
+
+                        let specifiertxt = specifier == null ? null : specifier.text;
+
+                        seg.typeName = type;
+                        seg.specifier = specifiertxt;
+                        this.pushSegNode(seg);
+                        this.setDeclaration(identifeir.text,seg);
+                    }
+                }
+
+            }
+        }
+        this.visitChildren(ctx);
+    }
+
     //#endregion
 }

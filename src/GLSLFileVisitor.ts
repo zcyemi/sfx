@@ -1,7 +1,7 @@
 import { AbstractParseTreeVisitor } from "antlr4ts/tree/AbstractParseTreeVisitor";
 import { GLSLVisitor } from "./glsl/GLSLVisitor";
 import { GLSLFile, GLSLSeg, GLSLSegPreprocCondition, GLSLSegPreprocDefine, GLSLSegFunction, GLSLVariableInfo, GLSLSegDeclarationBlock, GLSLTypeInfo, GLSLSegDeclaration } from "./GLSLFile";
-import { Preprocessor_statementContext, Function_definitionContext, Function_headerContext, Parameter_declarationContext, Struct_specifierContext, Member_declarationContext, Type_specifierContext, Interface_blockContext, Single_declarationContext } from "./glsl/GLSLParser";
+import { Preprocessor_statementContext, Function_definitionContext, Function_headerContext, Parameter_declarationContext, Struct_specifierContext, Member_declarationContext, Type_specifierContext, Interface_blockContext, Single_declarationContext, Function_call_headerContext, Variable_identifierContext } from "./glsl/GLSLParser";
 import { GLSLFormatter } from "./GLSLFormatter";
 import { VariableInfo, TypeInfo } from "./GLSLSource";
 
@@ -96,6 +96,7 @@ export class GLSLFileVisitor extends AbstractParseTreeVisitor<any> implements GL
 
     visitFunction_definition(ctx:Function_definitionContext){
         let funcSeg = new GLSLSegFunction();
+        funcSeg.text = GLSLFormatter.instance.visit(ctx);
         this.m_curfuncSeg = funcSeg;
         this.visitChildren(ctx);
         this.pushSegNode(funcSeg);
@@ -221,6 +222,31 @@ export class GLSLFileVisitor extends AbstractParseTreeVisitor<any> implements GL
                 }
 
             }
+        }
+        else{
+            let info = new GLSLVariableInfo();
+            let typename = ctx.fully_specified_type().text;
+            let identifier = ctx.IDENTIFIER().text;
+            info.typeName = typename;
+            info.identifier = identifier;
+            curFunc.setVariableDef(identifier,info);
+        }
+        this.visitChildren(ctx);
+    }
+
+    visitFunction_call_header(ctx:Function_call_headerContext){
+        let curFunc = this.m_curfuncSeg;
+        if(curFunc != null){
+            const funcName = ctx.function_identifier().text;
+            curFunc.setFunctionRef(funcName);
+        }
+        this.visitChildren(ctx);
+    }
+
+    visitVariable_identifier(ctx:Variable_identifierContext){
+        let curFunc = this.m_curfuncSeg;
+        if(curFunc!=null){
+            curFunc.setVariableRef(ctx.IDENTIFIER().text);
         }
         this.visitChildren(ctx);
     }

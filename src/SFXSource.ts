@@ -14,7 +14,6 @@ export class SFXTechniquePipeline{
     public ztest?:string;
 }
 
-
 export class SFXTechniqueProperty{
     public type:string;
     public index:string;
@@ -201,9 +200,7 @@ export class SFXTool{
             }
 
             let techniques = sfx.techniques;
-
             let tasks:Promise<boolean>[] = [];
-
             let retTechniques:SFXShaderTechnique[] = [];
 
             if(techniques!=null){
@@ -215,7 +212,6 @@ export class SFXTool{
     
                     GLSLTool.collapseToShader(srcVS,GLSLShaderType.Vertex,t.vsEntry);
                     GLSLTool.collapseToShader(srcPS,GLSLShaderType.Fragment,t.psEntry);
-
 
                     let buildtechnique = new Promise<boolean>(async (res,rej)=>{
 
@@ -233,23 +229,15 @@ export class SFXTool{
                             technique.glsl_vs = srcVS.getSource();
                             retTechniques.push(technique);
                         }
-                        
                         res(suc);
-
-
                     })
-    
                     tasks.push(buildtechnique);
                 })
             }
-
             await Promise.all(tasks);
             res(retTechniques);
-
         });
     }
-
     public static optimizeGLSL(glsl:string){
-
     }
 }

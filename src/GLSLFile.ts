@@ -1,3 +1,5 @@
+import { Utility } from "./Utility";
+
 export enum GLSLSegType{
     Version,
     Declaration,
@@ -91,6 +93,7 @@ export class GLSLSegFunction extends GLSLSeg{
 
     public variableDef:Map<string,GLSLVariableInfo> = new Map();
     public variableRef:string[] = [];
+    public functionRef:string[] = [];
     public parameterDef:Map<string,GLSLVariableInfo> = new Map();
 
     public constructor(){
@@ -99,6 +102,20 @@ export class GLSLSegFunction extends GLSLSeg{
 
     public setParameter(identifier:string,info:GLSLVariableInfo){
         this.parameterDef.set(identifier,info);
+    }
+
+    public setVariableDef(identifier:string,info:GLSLVariableInfo){
+        this.variableDef.set(identifier,info);
+    }
+    public setVariableRef(identifier:string){
+        if(identifier == this.identifier) return;
+        if(this.functionRef.includes(identifier)) return;
+        if(this.variableDef.get(identifier)!=null) return;
+        Utility.arrayAddDistinct(this.variableRef,identifier);
+    }
+
+    public setFunctionRef(identifier:string){
+        Utility.arrayAddDistinct(this.functionRef,identifier);
     }
 }
 

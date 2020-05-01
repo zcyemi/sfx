@@ -1,11 +1,11 @@
 import { ANTLRInputStream, CommonTokenStream } from "antlr4ts";
-import { GLSLTool } from "./GLSLTool";
-import { GLSLSource, GLSLShaderType } from "./GLSLSource";
+import { GLSLTool, GLSLDependencyInfo } from "./GLSLTool";
 import { SFXLexer } from "./sfx/SFXLexer";
 import { SFXParser } from "./sfx/SFXParser";
 import { SFXShaderTechnique } from "./SFXCompilationCtx";
 import { SFXSourceVisotor } from "./SFXSourceVisotor";
 import { Utility } from "./Utility";
+import { GLSLFile, GLSLShaderType } from "./GLSLFile";
 
 export class SFXTechniquePipeline{
     public queue?:string;
@@ -183,15 +183,10 @@ export class SFXTool{
                 return;
             }
 
-            let source:GLSLSource = null;
+            let source:GLSLFile = null;
 
             try{
-                source = await GLSLTool.parse(glslsource,sfx.fileName);
-                source = await GLSLTool.segment(source);
-                source = await GLSLTool.analysis(source);
-
-                GLSLTool.analysisVariable(source,[]);
-
+                source = await GLSLTool.parseGLSLFile(glslsource,sfx.fileName);
             }
             catch(e){
                 console.log(e);
@@ -205,28 +200,37 @@ export class SFXTool{
 
             if(techniques!=null){
                 techniques.forEach(t=>{
-                    let funcTouchedVS = GLSLTool.analysisFunctions(source,[t.vsEntry]);
-                    let funcTouchedPS = GLSLTool.analysisFunctions(source,[t.psEntry]);
-                    let srcVS = GLSLTool.trimFunctions(source.clone(),funcTouchedVS);
-                    let srcPS = GLSLTool.trimFunctions(source.clone(),funcTouchedPS);
+                    let depInfoVS = new GLSLDependencyInfo();
+                    depInfoVS.entryFunctions = [t.vsEntry];
+
+                    let depInfoPS = new GLSLDependencyInfo();
+                    depInfoPS.entryFunctions = [t.psEntry];
+
+                    GLSLTool.resolveDependency(source,depInfoVS);
+                    GLSLTool.resolveDependency(source,depInfoPS);
+
+                    let sourceVS = source.clone();
+                    let sourcePS = source.clone();
+                    GLSLTool.trimDepsApply(sourceVS,depInfoVS);
+                    GLSLTool.trimDepsApply(sourcePS,depInfoPS);
     
-                    GLSLTool.collapseToShader(srcVS,GLSLShaderType.Vertex,t.vsEntry);
-                    GLSLTool.collapseToShader(srcPS,GLSLShaderType.Fragment,t.psEntry);
+                    GLSLTool.collapseToShader(sourceVS,GLSLShaderType.Vertex,t.vsEntry);
+                    GLSLTool.collapseToShader(sourcePS,GLSLShaderType.Fragment,t.psEntry);
 
                     let buildtechnique = new Promise<boolean>(async (res,rej)=>{
 
-                        let suc = GLSLTool.glslVerify(source.fileName+'.vert',srcVS);
+                        let suc = GLSLTool.glslVerify(source.fileName+'.vert',sourceVS);
                         if(!suc){
                             res(false);
                         }
 
-                        suc = GLSLTool.glslVerify(source.fileName+'.frag',srcPS);
+                        suc = GLSLTool.glslVerify(source.fileName+'.frag',sourcePS);
 
                         if(suc){
                             let technique:SFXShaderTechnique = new SFXShaderTechnique();
                             technique.technique = t;
-                            technique.glsl_ps = srcPS.getSource();
-                            technique.glsl_vs = srcVS.getSource();
+                            technique.glsl_vs = sourceVS.getGLSLSource();
+                            technique.glsl_ps = sourcePS.getGLSLSource();
                             retTechniques.push(technique);
                         }
                         res(suc);

@@ -58,6 +58,36 @@ vec4 ClipToWorld(in vec4 clippoint){
 }
 #define saturate(x) clamp(x,0.0,1.0)
 
+layout (std140) uniform UNIFORM_LIGHT{
+    vec4 lightColor0;
+    vec4 lightColor1;
+    vec4 lightColor2;
+    vec4 lightColor3;
+    vec4 lightIntensity;
+    vec4 lightPosX;
+    vec4 lightPosY;
+    vec4 lightPosZ;
+    vec4 light_ambient;
+    vec4 lightPrimePos;
+    vec4 lightPrimeColor;
+};
+
+#define LIGHT_COLOR0 lightColor0
+#define LIGHT_COLOR1 lightColor1
+#define LIGHT_COLOR2 lightColor2
+#define LIGHT_COLOR3 lightColor3
+
+
+#define MAIN_LIGHT_POS lightPrimePos
+#define MAIN_LIGHT_COLOR lightPrimeColor
+
+
+#define LIGHT_INTENSITY lightIntensity
+#define LIGHT_INTENSITY0 lightIntensity.x
+#define LIGHT_INTENSITY1 lightIntensity.y
+#define LIGHT_INTENSITY2 lightIntensity.z
+#define LIGHT_INTENSITY3 lightIntensity.w
+
 vec3 LightModel_Lambert(vec3 lightdir,vec3 lightColor,float atten,vec3 normal,vec3 albedo){
     float diff = max(.0,dot(lightdir,normal));
     return albedo * lightColor * diff * atten;
@@ -128,6 +158,7 @@ uniform vec4 uColor;
 
 void fragment(){
     vec3 col = Sample_4PointLights(v2f.wpos,normalize(v2f.normal)) * uColor.xyz;
+    saturate(10,1,0);
     vec3 mainCol = LightModel_Lambert(MAIN_LIGHT_POS.xyz,MAIN_LIGHT_COLOR.xyz,MAIN_LIGHT_COLOR.w,v2f.normal,uColor.xyz);
     fragColor = vec4(mainCol + col,1.0);
 }

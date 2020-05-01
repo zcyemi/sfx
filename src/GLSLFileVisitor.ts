@@ -1,12 +1,8 @@
 import { AbstractParseTreeVisitor } from "antlr4ts/tree/AbstractParseTreeVisitor";
+import { Function_call_headerContext, Function_definitionContext, Function_headerContext, Interface_blockContext, Member_declarationContext, Parameter_declarationContext, Preprocessor_statementContext, Single_declarationContext, Struct_specifierContext, Type_specifierContext, Variable_identifierContext } from "./glsl/GLSLParser";
 import { GLSLVisitor } from "./glsl/GLSLVisitor";
-import { GLSLFile, GLSLSeg, GLSLSegPreprocCondition, GLSLSegPreprocDefine, GLSLSegFunction, GLSLVariableInfo, GLSLSegDeclarationBlock, GLSLTypeInfo, GLSLSegDeclaration } from "./GLSLFile";
-import { Preprocessor_statementContext, Function_definitionContext, Function_headerContext, Parameter_declarationContext, Struct_specifierContext, Member_declarationContext, Type_specifierContext, Interface_blockContext, Single_declarationContext, Function_call_headerContext, Variable_identifierContext } from "./glsl/GLSLParser";
+import { GLSLFile, GLSLSeg, GLSLSegDeclaration, GLSLSegDeclarationBlock, GLSLSegFunction, GLSLSegPreprocCondition, GLSLSegPreprocDefine, GLSLTypeInfo, GLSLVariableInfo } from "./GLSLFile";
 import { GLSLFormatter } from "./GLSLFormatter";
-import { VariableInfo, TypeInfo } from "./GLSLSource";
-
-
-
 
 export class GLSLFileVisitor extends AbstractParseTreeVisitor<any> implements GLSLVisitor<any> {
     
@@ -81,6 +77,7 @@ export class GLSLFileVisitor extends AbstractParseTreeVisitor<any> implements GL
                 node.identifier = identifier;
                 this.setDefine(identifier,node);
             }
+            node.parseExpr();
             this.pushSegNode(node);
         }
         else{

@@ -11,8 +11,15 @@ const GLSL_INTERNAL_FUNC:string[] = [
     'texture1DLod','texture1DProjLod','texture2DLod','texture2DProjLod','texture3DProjLod',
     'textureCubeLod','shadow1DLod','shadow2DLod','shadow1DProjLod','shadow2DProjLod',
     'dFdx','dFdy','fwidth',
+    'max',
+    'clamp','inverse'
 ];
 
+
+export enum GLSLShaderType{
+    Vertex,
+    Fragment,
+}
 
 export var GLSL_INTERNAL_FUNC_MAP:{} = {};
 GLSL_INTERNAL_FUNC.forEach(f=>GLSL_INTERNAL_FUNC_MAP[f]= true);
@@ -46,6 +53,8 @@ export abstract class GLSLSeg{
     public constructor(type:GLSLSegType){
         this.segType = type;
     }
+
+    public update(){}
 }
 
 export class GLSLSegVersion extends GLSLSeg{
@@ -65,6 +74,13 @@ export class GLSLSegDeclaration extends GLSLSeg{
     public constructor(){
         super(GLSLSegType.Declaration);
     }
+
+    public update(){
+        let specifier = this.specifier;
+        if(specifier == 'in' || specifier == 'out'){
+            this.text = `${specifier} ${this.typeName} ${this.identifier};`;
+        }
+    }
 }
 
 export class GLSLSegDeclarationBlock extends GLSLSeg{
@@ -82,8 +98,54 @@ export class GLSLSegPreprocDefine extends GLSLSeg{
     public isFunc:boolean;
     public valueExpr:string;
 
+    public variableRef:string[] = [];
+    public functionRef:string[] = [];
+
     public constructor(){
         super(GLSLSegType.PreprocDefine);
+    }
+
+    public parseExpr(){
+        let expr = this.valueExpr;
+        if(expr == null || expr == '')return;
+        this.parseExpression(expr,this.functionRef,this.variableRef);
+    }
+
+    private parseExpression(text:string,funcRef:string[],variableRef:string[]){
+        text = text.trim();
+        let matchFunc =  text.match(/([\d\w_]+)\s*\((.+)\)/);
+        if(matchFunc!=null){
+            let funcId = matchFunc[1];
+            if(!GLSL_INTERNAL_FUNC_MAP[funcId]){
+                funcRef.push(funcId);
+            }
+            
+            this.parseExpression(matchFunc[2],funcRef,variableRef);
+            text = text.replace(matchFunc[0],"");
+            this.parseExpression(text,funcRef,variableRef);
+            return;
+        }
+
+        text = text.replace(/(\*|\+|,|-|\/)/gm,' ');
+
+        let subtext = text.split(' ').filter(t=>t!='');
+        subtext.forEach(t=>{
+            t = t.trim();
+            if(t.match(/^\d*(\.\d*)?$/gm)){
+                return;
+            };
+            if(t.indexOf('.')>=0){
+                let ts = t.split('.')[0];
+
+                if(variableRef.indexOf(ts) <0){
+                    variableRef.push(ts)
+                }
+                variableRef.push(ts[0]);
+            }
+            else{
+                variableRef.push(t);
+            }
+        })
     }
 }
 
@@ -147,7 +209,38 @@ export class GLSLFile{
     public define:Map<string,GLSLSegPreprocDefine> = new Map();
 
     public defineTypes:Map<string,GLSLSegDeclarationBlock> = new Map();
-    public declarationBlock:Map<string,GLSLSegDeclarationBlock> = new Map();
     
     public fileName:string;
+
+    public glslSource:string;
+
+    public getGLSLSource():string{
+        if(this.glslSource == null){
+            this.glslSource = this.combineSegments();
+        }
+        return this.glslSource;
+    }
+
+    private combineSegments():string{
+        return this.segments.map(seg=>{
+            let text = seg.text;
+            if(!text.endsWith('\n')){
+                return text +'\n';
+            }
+            return text;
+        }).join('');
+    }
+
+    public clone():GLSLFile{
+        let ret =new GLSLFile();
+        ret.fileName = this.fileName;
+        ret.segments = Utility.clone(this.segments);
+        ret.functions = Utility.clone(this.functions);
+        ret.declaration = Utility.clone(this.declaration);
+        ret.define = Utility.clone(this.define);
+        ret.defineFunc = Utility.clone(this.defineFunc);
+        ret.defineTypes = Utility.clone(this.defineTypes);
+        ret.glslSource = this.glslSource;
+        return this;
+    }
 }

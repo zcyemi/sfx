@@ -51,6 +51,27 @@ export class Utility{
         })
     }
 
+    public static ArrayDistinct<T>(ary:T[]):T[]{
+        if(ary == null) return null;
+        if(ary.length <=1) return ary.concat([]);
+
+        let ret = ary.sort();
+
+        let temp:T = ary[0];
+        let writeIndex = 1;
+        const len = ret.length;
+
+        for(let t=1;t<len;t++){
+            const val = ary[t];
+            if(val != temp){
+                temp = val;
+                ary[writeIndex] = val;
+                writeIndex ++;
+            }
+        }
+        return ret.slice(0,writeIndex);
+    }
+
     public static ResolveDeps(startItems:string[],allItems:string[],funcGetDep:(item:string)=>string[]):string[]{
         let depMap:Map<string,string[]> = new Map();
         allItems.forEach(item=>{

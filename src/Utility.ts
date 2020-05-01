@@ -26,9 +26,10 @@ export class APIResult{
 
 export class Utility{
 
-    public static arrayAddDistinct<T>(ary:T[],o:T){
-        if(ary.indexOf(o) >=0) return;
+    public static arrayAddDistinct<T>(ary:T[],o:T):boolean{
+        if(ary.indexOf(o) >=0) return false;
         ary.push(o);
+        return true;
     }
 
     public static md5hash(str:string):string{
@@ -42,6 +43,7 @@ export class Utility{
     }
 
     public static ArrayConcatDistainct<T>(ary:T[],b:T[]){
+        if(b == null || b.length== 0) return;
         b.forEach(obj=>{
             if(obj == null) return;
             if(ary.indexOf(obj) >=0) return;
@@ -141,6 +143,19 @@ export class Utility{
 
         a.forEach(t=>{
             if(b.includes(t)){
+                ret.push(t);
+            }
+        });
+        return ret;
+    }
+
+    public static ArrayExclude<T>(a:T[],b:T[]):T[]{
+        if(a == null || a.length == 0) return [];
+        if(b == null || b.length == 0) return a.concat([]);
+
+        let ret = [];
+        a.forEach(t=>{
+            if(!b.includes(t)){
                 ret.push(t);
             }
         });

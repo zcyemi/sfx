@@ -6,31 +6,45 @@ import { Utility } from "./Utility";
 import * as fs from "fs";
 import os from 'os';
 import * as childProcess from 'child_process';
-import { GLSLFile } from "./GLSLFile";
+import { GLSLFile, GLSLSeg, GLSLSegFunction, GLSLSegPreprocDefine } from "./GLSLFile";
 import { GLSLFileVisitor } from "./GLSLFileVisitor";
 
 const PATH_TEMP_SFX = Utility.PathCombine(os.tmpdir(),'sfx-cache');
 
-export class GLSLTool{
+export class GLSLDependencyInfo{
+    public entryFunctions:string[];
 
+    public touchedSegs:GLSLSeg[] = [];
+    public touchedDeclaration:string[] = [];
+    public touchedDefine:string[] = [];
+
+    public touchedDefineFunc:string[] = [];
+    public touchedFunctions:string[] = [];
+
+    public touchedTypes:string[] = [];
+    public touchedDeclarationBlock:string[] = [];
+
+    public pendingVariableRef:string[] = [];
+
+    public addFunc(identifier:string):boolean{
+        return Utility.arrayAddDistinct(this.touchedFunctions,identifier);
+    }
+
+    public addDefineFunc(identifier:string):boolean{
+        return Utility.arrayAddDistinct(this.touchedDefineFunc,identifier);
+    }
+
+    public addVaraiblesRef(variables:string[]){
+        Utility.ArrayConcatDistainct(this.pendingVariableRef,variables);
+    }
+
+}
+
+export class GLSLTool{
 
     public static parseGLSLFile(glsl:string,filename:string):Promise<GLSLFile>{
         return new Promise((res,rej)=>{
             let input = new ANTLRInputStream(glsl);
-            let lexer = new GLSLLexer(input);
-            let tokenstream = new CommonTokenStream(lexer);
-            let parse = new GLSLParser(tokenstream);
-
-            var visitor = new GLSLFileVisitor();
-            visitor.visit(parse.external_declaration_list());
-            res(visitor.sourceFile);
-        });
-    }
-
-    public static parse(glsl:string,filename:string):Promise<GLSLSource>{
-        return new Promise((res,rej)=>{
-            let input = new ANTLRInputStream(glsl);
-
             let lexer = new GLSLLexer(input);
             let tokenstream = new CommonTokenStream(lexer);
             let parse = new GLSLParser(tokenstream);
@@ -54,106 +68,64 @@ export class GLSLTool{
                 }
             });
 
-            let root = parse.external_declaration_list();
+            var visitor = new GLSLFileVisitor();
+            visitor.visit(parse.external_declaration_list());
+            res(visitor.sourceFile);
+        });
+    }
 
-            if(hasError){
-                rej(errmsg);
-                return;
+    public static resolveDependency(source:GLSLFile,depInfo:GLSLDependencyInfo){
+
+        let pendingFunc:string[] = depInfo.entryFunctions.concat([]);
+        
+        while(pendingFunc!=null && pendingFunc.length>0){
+            pendingFunc = GLSLTool.resolveDepSteps(pendingFunc,source,depInfo);
+        }
+
+        let pendingVariable = depInfo.pendingVariableRef;
+
+        source.declaration.forEach((val,key)=>{
+            if(pendingVariable.includes(key)){
+                depInfo.touchedDeclaration.push(key);
+                depInfo.touchedSegs.push(val);
             }
-
-            let source = new GLSLSource(parse,root);
-            source.source = glsl;
-            source.fileName = filename;
-            res(source);
-            return true;
-        });
-    }
-
-    public static analysis(source:GLSLSource):Promise<GLSLSource>{
-        return new Promise((res,rej)=>{
-            let visitor = new GLSLAnalysisVisitor(source);
-            visitor.visit(source.parser_root);
-            res(source);
-        });
-    }
-
-    public static segment(source:GLSLSource):Promise<GLSLSource>{
-        return new  Promise((res,rej)=>{
-            let visitor = new GLSLSegmentVisitor(source);
-            res(source);
         })
+
+ 
+
+        console.log(depInfo);
     }
 
-    public static analysisFunctions(source:GLSLSource,entryFunctions:string[]):string[]{
-        let info = source;
-        if(info == null) throw new Error('source not analysised');
+    private static resolveDepSteps(pendingFunc:string[],source:GLSLFile,depInfo:GLSLDependencyInfo):string[]{
+        let retPendingFunc:string[] = [];
 
-        let functionTouched:string[] = [];
-        functionTouched.push(...entryFunctions);
-
-        let funcs = info.functions;
-
-        let pendingFunctions:string[] = [];
-        let workingFunctions:string[] = [];
-        workingFunctions.push(...functionTouched);
-      
-        while(workingFunctions.length >0){
-            workingFunctions.forEach(f=>{
-                let fobj = funcs[f];
-                if(fobj!=null){
-                    let subfunc = fobj.funcInvokes;
-                    subfunc.forEach(t=>{
-                        if(functionTouched.includes(t))return;
-                        if(funcs[t] !=null){
-                            pendingFunctions.push(t);
-                        }
-                    });
+        pendingFunc.forEach(func=>{
+            let funcSeg:GLSLSeg = source.functions.get(func);
+            if(funcSeg == null) {
+                funcSeg = source.defineFunc.get(func);
+                if(funcSeg == null){
+                    throw new Error(`can not find function ${func}`);
                 }
-            });
-            functionTouched.push(...pendingFunctions);
-            workingFunctions = pendingFunctions;
-            pendingFunctions = [];
-        }
-        return functionTouched;
-    }
-
-    public static analysisVariable(source:GLSLSource,variableRef:string[]){
-        let touchedVaraibles:string[] = [];
-        let functions = source.functions;
-
-        for (const key in functions) {
-            if (functions.hasOwnProperty(key)) {
-                const element = functions[key];
-                touchedVaraibles.push(element.funcId);
+                else{
+                    let seg:GLSLSegPreprocDefine = <GLSLSegPreprocDefine>funcSeg;
+                    if(depInfo.addDefineFunc(func)){
+                        
+                    }
+                }
             }
-        }
-        //Resolve Defines
-
-        let allVariables:string[] = [];
-        let validSegmentsType:GLSLSegmentType[] = [GLSLSegmentType.Declaration, GLSLSegmentType.Function, GLSLSegmentType.Preprocessor];
-        source.segments.forEach(seg=>{
-            if(validSegmentsType.includes(seg.segmentType)){
-                Utility.ArrayInsert(allVariables,seg.identifier);
+            else{
+                let seg:GLSLSegFunction = <GLSLSegFunction>funcSeg;
+                if(depInfo.addFunc(func)){
+                    let subfunc = Utility.ArrayExclude(seg.functionRef,depInfo.touchedFunctions);
+                    retPendingFunc.push(...subfunc);
+                    depInfo.addVaraiblesRef(seg.variableRef);
+                }
+                
             }
-        })
+            depInfo.touchedSegs.push(funcSeg);
+        });
 
-        var funcGetDep = function(segIdentifier:string):string[]{
-            let seg = source.getSegment(segIdentifier);
-            if(seg == null) return null;
-
-            switch(seg.segmentType){
-                case GLSLSegmentType.Function:
-                    return source.functions[segIdentifier].variableRef;
-                case GLSLSegmentType.Preprocessor:
-                    let define = source.define[segIdentifier];
-                    if(define == null) define = source.defineFunction[segIdentifier];
-                    if(define == null) return null;
-                    return define.parameterRef;
-            }
-        }
-
-        let resultTouched = Utility.ResolveDeps(touchedVaraibles,allVariables,funcGetDep);
-     
+        return retPendingFunc;
     }
 
     public static trimFunctions(source:GLSLSource,functionsKeep:string[]):GLSLSource{

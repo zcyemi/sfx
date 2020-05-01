@@ -1,5 +1,22 @@
 import { Utility } from "./Utility";
 
+const GLSL_INTERNAL_FUNC:string[] = [
+    'vec4','vec3','vec2','mat2','mat3','mat4','ivec2','ivec3','ivec4',
+    'sin','cos','tan','asin','acos','atan','radians','degrees',
+    'pow','exp','log','exp2','log2','sqrt','inversesqrt',
+    'abs','ceil','clamp','floor','fract','max','min','mix','mod','sign','smoothstep','step',
+    'cross','dot','length','normalize','reflect','refract',
+    'texture1D','texture1DProj','texture2D','texture2DProj','texture3D','texture3DProj','textureCube',
+    'shadow1D','shadow2D','shadow1DProj','shadow2DProj',
+    'texture1DLod','texture1DProjLod','texture2DLod','texture2DProjLod','texture3DProjLod',
+    'textureCubeLod','shadow1DLod','shadow2DLod','shadow1DProjLod','shadow2DProjLod',
+    'dFdx','dFdy','fwidth',
+];
+
+
+export var GLSL_INTERNAL_FUNC_MAP:{} = {};
+GLSL_INTERNAL_FUNC.forEach(f=>GLSL_INTERNAL_FUNC_MAP[f]= true);
+
 export enum GLSLSegType{
     Version,
     Declaration,
@@ -115,6 +132,7 @@ export class GLSLSegFunction extends GLSLSeg{
     }
 
     public setFunctionRef(identifier:string){
+        if(GLSL_INTERNAL_FUNC_MAP[identifier]) return;
         Utility.arrayAddDistinct(this.functionRef,identifier);
     }
 }
@@ -127,8 +145,9 @@ export class GLSLFile{
 
     public declaration:Map<string,GLSLSegDeclaration> = new Map();
     public define:Map<string,GLSLSegPreprocDefine> = new Map();
-    public defineTypes:Map<string,GLSLSegDeclarationBlock> = new Map();
 
+    public defineTypes:Map<string,GLSLSegDeclarationBlock> = new Map();
     public declarationBlock:Map<string,GLSLSegDeclarationBlock> = new Map();
+    
     public fileName:string;
 }

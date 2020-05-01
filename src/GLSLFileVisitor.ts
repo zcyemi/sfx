@@ -5,6 +5,9 @@ import { Preprocessor_statementContext, Function_definitionContext, Function_hea
 import { GLSLFormatter } from "./GLSLFormatter";
 import { VariableInfo, TypeInfo } from "./GLSLSource";
 
+
+
+
 export class GLSLFileVisitor extends AbstractParseTreeVisitor<any> implements GLSLVisitor<any> {
     
     private source:GLSLFile = new GLSLFile();

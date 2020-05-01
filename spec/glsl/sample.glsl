@@ -1,3 +1,5 @@
+
+precision mediump float;
 #define PI 3.1415926
 #define PI_2 6.2831852
 #define PI_HALF 1.5707963
@@ -56,7 +58,6 @@ float DECODE_VIEWDEPTH(float d){
 vec4 ClipToWorld(in vec4 clippoint){
     return inverse(MATRIX_VP) * clippoint;
 }
-#define saturate(x) clamp(x,0.0,1.0)
 
 layout (std140) uniform UNIFORM_LIGHT{
     vec4 lightColor0;
@@ -158,7 +159,6 @@ uniform vec4 uColor;
 
 void fragment(){
     vec3 col = Sample_4PointLights(v2f.wpos,normalize(v2f.normal)) * uColor.xyz;
-    saturate(10,1,0);
     vec3 mainCol = LightModel_Lambert(MAIN_LIGHT_POS.xyz,MAIN_LIGHT_COLOR.xyz,MAIN_LIGHT_COLOR.w,v2f.normal,uColor.xyz);
     fragColor = vec4(mainCol + col,1.0);
 }

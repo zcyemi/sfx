@@ -202,30 +202,28 @@ export class Utility{
                 item.forEach(function(child, index, array) { 
                     result[index] = Utility.clone( child );
                 });
+
             } else if (typeof item == "object") {
                 // testing that this is DOM
                 if (item.nodeType && typeof item.cloneNode == "function") {
                     result = item.cloneNode( true );    
+
                 } else if (!item.prototype) { // check that this is a literal
                     if (item instanceof Date) {
                         result = new Date(item);
                     } else {
                         // it is an object literal
-                        result = {};
+                        result = Object.create(Object.getPrototypeOf(item));
                         for (var i in item) {
                             result[i] = Utility.clone( item[i] );
                         }
+
                     }
                 } else {
-                    // depending what you would like here,
-                    // just keep the reference, or create new object
-                    if (false && item.constructor) {
-                        // would not advice to do that, reason? Read below
-                        result = new item.constructor();
-                    } else {
-                        result = item;
-                    }
+                    result = item;
                 }
+
+
             } else {
                 result = item;
             }

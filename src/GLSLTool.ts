@@ -29,6 +29,10 @@ export class GLSLDependencyInfo{
         return Utility.arrayAddDistinct(this.touchedFunctions,identifier);
     }
 
+    public addType(typename:string):boolean{
+        return Utility.arrayAddDistinct(this.touchedTypes,typename);
+    }
+
     public addDefineFunc(identifier:string):boolean{
         return Utility.arrayAddDistinct(this.touchedDefineFunc,identifier);
     }
@@ -74,7 +78,9 @@ export class GLSLTool{
 
             var visitor = new GLSLFileVisitor();
             visitor.visit(parse.external_declaration_list());
-            res(visitor.sourceFile);
+            let sourceFile = visitor.sourceFile;
+            sourceFile.fileName = filename;
+            res(sourceFile);
         });
     }
 
@@ -129,6 +135,14 @@ export class GLSLTool{
             if(dec!=null){
                 depInfo.touchedDeclaration.push(v);
                 depInfo.addVariable(v);
+
+                let ty = dec.typeName;
+                if(ty !=null){
+                    if(source.defineTypes.get(ty)!=null){
+                        depInfo.addType(ty);
+                    }
+                }
+
                 return;
             }
 
@@ -170,13 +184,22 @@ export class GLSLTool{
             switch(segtype){
                 case GLSLSegType.Declaration:
                     let id = (<GLSLSegDeclaration>seg).identifier;
-                    return depInfo.touchedDeclaration.includes(id) || depInfo.touchedDefineFunc.includes(id);
+                    return depInfo.touchedDeclaration.includes(id);
                 case GLSLSegType.DeclarationBlock:
                     return depInfo.touchedTypes.includes((<GLSLSegDeclarationBlock>seg).typeInfo.typeName);
                 case GLSLSegType.Function:
                     return depInfo.touchedFunctions.includes((<GLSLSegFunction>seg).identifier);
                 case GLSLSegType.PreprocDefine:
-                    return depInfo.touchedDefine.includes((<GLSLSegPreprocDefine>seg).identifier);
+                    {
+                        let segdef = (<GLSLSegPreprocDefine>seg);
+                        let identifier =  segdef.identifier;
+                        if(segdef.isFunc){
+                            return depInfo.touchedDefineFunc.includes(identifier);
+                        }
+                        else{
+                            return depInfo.touchedDefine.includes(identifier);
+                        }
+                    }
             }
             return true;
         });
@@ -204,7 +227,7 @@ export class GLSLTool{
             segVaryings.forEach(seg=>{
                 let segdecl = <GLSLSegDeclaration>seg;
                 segdecl.specifier = 'in';
-                seg.update();
+                segdecl.update();
             });
         }
 

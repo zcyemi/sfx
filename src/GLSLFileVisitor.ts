@@ -1,7 +1,7 @@
 import { AbstractParseTreeVisitor } from "antlr4ts/tree/AbstractParseTreeVisitor";
-import { Function_call_headerContext, Function_definitionContext, Function_headerContext, Interface_blockContext, Member_declarationContext, Parameter_declarationContext, Preprocessor_statementContext, Single_declarationContext, Struct_specifierContext, Type_specifierContext, Variable_identifierContext } from "./glsl/GLSLParser";
+import { Function_call_headerContext, Function_definitionContext, Function_headerContext, Interface_blockContext, Member_declarationContext, Parameter_declarationContext, Preprocessor_statementContext, Single_declarationContext, Struct_specifierContext, Type_specifierContext, Variable_identifierContext, DeclarationContext } from "./glsl/GLSLParser";
 import { GLSLVisitor } from "./glsl/GLSLVisitor";
-import { GLSLFile, GLSLSeg, GLSLSegDeclaration, GLSLSegDeclarationBlock, GLSLSegFunction, GLSLSegPreprocCondition, GLSLSegPreprocDefine, GLSLTypeInfo, GLSLVariableInfo } from "./GLSLFile";
+import { GLSLFile, GLSLSeg, GLSLSegDeclaration, GLSLSegDeclarationBlock, GLSLSegFunction, GLSLSegPreprocCondition, GLSLSegPreprocDefine, GLSLTypeInfo, GLSLVariableInfo, GLSLSegPrecision } from "./GLSLFile";
 import { GLSLFormatter } from "./GLSLFormatter";
 
 export class GLSLFileVisitor extends AbstractParseTreeVisitor<any> implements GLSLVisitor<any> {
@@ -50,6 +50,22 @@ export class GLSLFileVisitor extends AbstractParseTreeVisitor<any> implements GL
         if(identifier!=null) return identifier.text;
         return type_noarray.struct_specifier().IDENTIFIER().text;
     }
+
+    //precisiion
+
+    visitDeclaration(ctx:DeclarationContext){
+        if(ctx.PRECISION() !=null){
+            let node = new GLSLSegPrecision();
+            node.typeName = ctx.type_specifier().text;
+            node.value = ctx.precision_qualifier().text;
+            node.text = GLSLFormatter.instance.visit(ctx);
+            this.pushSegNode(node);
+            return;
+        }
+
+        this.visitChildren(ctx);
+    }
+
 
     //#region Preprocessor
     visitPreprocessor_statement(ctx:Preprocessor_statementContext){
@@ -138,7 +154,7 @@ export class GLSLFileVisitor extends AbstractParseTreeVisitor<any> implements GL
 
 
         let seg = new GLSLSegDeclarationBlock();
-        seg.text = GLSLFormatter.instance.visit(ctx);
+        seg.text = GLSLFormatter.instance.visit(ctx)+';';
         seg.typeName = identifier;
         seg.typeInfo = typeInfo;
 
@@ -197,7 +213,8 @@ export class GLSLFileVisitor extends AbstractParseTreeVisitor<any> implements GL
             //global declaration
             
             let seg = new GLSLSegDeclaration();
-            seg.text = GLSLFormatter.instance.visit(ctx);
+            seg.text = GLSLFormatter.instance.visit(ctx)+';';
+
 
             let arrray = ctx.array_specifier();
             if(arrray != null){

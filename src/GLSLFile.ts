@@ -79,6 +79,7 @@ export class GLSLSegDeclaration extends GLSLSeg{
         let specifier = this.specifier;
         if(specifier == 'in' || specifier == 'out'){
             this.text = `${specifier} ${this.typeName} ${this.identifier};`;
+            
         }
     }
 }
@@ -235,12 +236,13 @@ export class GLSLFile{
         let ret =new GLSLFile();
         ret.fileName = this.fileName;
         ret.segments = Utility.clone(this.segments);
-        ret.functions = Utility.clone(this.functions);
-        ret.declaration = Utility.clone(this.declaration);
-        ret.define = Utility.clone(this.define);
-        ret.defineFunc = Utility.clone(this.defineFunc);
-        ret.defineTypes = Utility.clone(this.defineTypes);
+        ret.functions = new Map(this.functions);
+        
+        ret.declaration = new Map(this.declaration)
+        ret.define = new Map(this.define);
+        ret.defineFunc = new Map(this.defineFunc);
+        ret.defineTypes = new Map(this.defineTypes);
         ret.glslSource = this.glslSource;
-        return this;
+        return ret;
     }
 }

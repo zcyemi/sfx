@@ -1,0 +1,80 @@
+#file blit.sfx
+
+#include "basis.sfx"
+
+#GLSL
+
+in vec4 aPosition;
+in vec2 aUV;
+inout vec2 vUV;
+
+void vertex_flip(){
+    vec4 pos = aPosition;
+    pos.xy *=2.0;
+    vUV = vec2(aUV.x,1.0-aUV.y);
+    gl_Position = pos;
+}
+
+void vertex(){
+    vec4 pos = aPosition;
+    pos.xy *=2.0;
+    vUV = aUV;
+    gl_Position = pos;
+}
+
+uniform sampler2D uSampler;
+out vec4 fragColor;
+
+void fragment(){
+    fragColor = texture(uSampler,vUV);
+}
+#END
+
+
+technique unlit{
+    vs: vertex_flip;
+    ps: fragment;
+    pipeline:{
+        queue: opaque;
+        ztest: always;
+        zwrite: off;
+    }
+    property: {
+        POSITION_0: aPosition;
+        TEXCOORD_0: aUV;
+        MAIN_TEXTURE: uSampler;
+        TARGET_0: fragColor;
+    }
+}
+
+technique internal_blit{
+    vs: vertex;
+    ps: fragment;
+    pipeline:{
+        queue: opaque;
+        ztest: always;
+        zwrite: off;
+    }
+    property: {
+        POSITION_0: aPosition;
+        TEXCOORD_0: aUV;
+        MAIN_TEXTURE: uSampler;
+        TARGET_0: fragColor;
+    }
+}
+
+technique internal_blit_flip{
+    vs: vertex_flip;
+    ps: fragment;
+    pipeline:{
+        queue: opaque;
+        ztest: always;
+        zwrite: off;
+    }
+    property: {
+        POSITION_0: aPosition;
+        TEXCOORD_0: aUV;
+        MAIN_TEXTURE: uSampler;
+        TARGET_0: fragColor;
+    }
+}

@@ -6,7 +6,7 @@ const GLSL_INTERNAL_FUNC:string[] = [
     'pow','exp','log','exp2','log2','sqrt','inversesqrt',
     'abs','ceil','clamp','floor','fract','max','min','mix','mod','sign','smoothstep','step',
     'cross','dot','length','normalize','reflect','refract',
-    'texture1D','texture1DProj','texture2D','texture2DProj','texture3D','texture3DProj','textureCube',
+    'texture1D','texture1DProj','texture2D','texture2DProj','texture3D','texture3DProj','textureCube','texture',
     'shadow1D','shadow2D','shadow1DProj','shadow2DProj',
     'texture1DLod','texture1DProjLod','texture2DLod','texture2DProjLod','texture3DProjLod',
     'textureCubeLod','shadow1DLod','shadow2DLod','shadow1DProjLod','shadow2DProjLod',

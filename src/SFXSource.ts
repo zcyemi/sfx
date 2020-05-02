@@ -158,10 +158,7 @@ export class SFXTool{
 
     public static parseTechnique(sfx:SFXSource,deps?:Map<string,SFXSource>):Promise<SFXShaderTechnique[]>{
         return new Promise(async (res,rej)=>{
-
             let depList = await SFXTool.extractDependency(sfx,deps);
-            console.log(sfx.fileName,depList);
-
             let glslblocks:string[] = [];
             if(depList!=null && depList.length >0){
                 depList.forEach(fname=>{
@@ -184,7 +181,7 @@ export class SFXTool{
             }
 
             let source:GLSLFile = null;
-
+            glslsource +='\n';
             try{
                 source = await GLSLTool.parseGLSLFile(glslsource,sfx.fileName);
             }
@@ -229,6 +226,7 @@ export class SFXTool{
                         if(suc){
                             let technique:SFXShaderTechnique = new SFXShaderTechnique();
                             technique.technique = t;
+                            technique.name = t.name;
                             technique.glsl_vs = sourceVS.getGLSLSource();
                             technique.glsl_ps = sourcePS.getGLSLSource();
                             retTechniques.push(technique);
@@ -238,7 +236,8 @@ export class SFXTool{
                     tasks.push(buildtechnique);
                 })
             }
-            await Promise.all(tasks);
+
+            let validateResult = await Promise.all(tasks);
             res(retTechniques);
         });
     }

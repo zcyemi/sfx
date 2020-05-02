@@ -81,6 +81,7 @@ export class SFXSourceVisotor extends AbstractParseTreeVisitor<any> implements S
 
     visitTeq_def(ctx:Teq_defContext){
         let teq = new SFXTechnique();
+
         teq.name = ctx.SFX_IDENTIFIER().text;
 
         this.m_teq = teq;

@@ -83,7 +83,7 @@ SFX_EXT: '.sfx';
 
 fragment DIGIT  : '0'..'9';
 
-SFX_SEMANTIC: SFX_SEMANTIC_TYPE '_' DIGIT;
+SFX_SEMANTIC: SFX_SEMANTIC_TYPE '_' DIGIT | 'MAIN_TEXTURE';
 
 SFX_IDENTIFIER: ('a'..'z' | 'A'..'Z' | '_') (DIGIT | 'a'..'z' | 'A'..'Z' | '_')*;
 

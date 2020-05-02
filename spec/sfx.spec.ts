@@ -4,6 +4,9 @@ import { SFXCompilationCtx } from '../src/SFXCompilationCtx';
 import { SFXFileResolver } from '../src/SFXFileResolver';
 
 import { expect} from 'chai';
+import { SFXConfig } from '../src/SFXConfig';
+
+SFXConfig.GLSLANG_PATH = 'tools/glslangValidator.exe';
 
 function loadSource(file:string):string{
     return fs.readFileSync(file,"utf8");

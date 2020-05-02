@@ -3,6 +3,9 @@ import fs from 'fs';
 
 import {GLSLTool, GLSLDependencyInfo} from '../src/GLSLTool';
 import { GLSLFile, GLSLShaderType, GLSLSegType } from '../src/GLSLFile';
+import { SFXConfig } from '../src/SFXConfig';
+
+SFXConfig.GLSLANG_PATH = 'tools/glslangValidator.exe';
 
 function loadSource(file:string):string{
     return fs.readFileSync(file,"utf8");

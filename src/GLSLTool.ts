@@ -7,6 +7,7 @@ import { GLSLParser } from "./glsl/GLSLParser";
 import { GLSLFile, GLSLSeg, GLSLSegFunction, GLSLSegPreprocDefine,GLSLShaderType, GLSLSegType, GLSLSegDeclaration, GLSLSegDeclarationBlock } from "./GLSLFile";
 import { GLSLFileVisitor } from "./GLSLFileVisitor";
 import { Utility, APIResult } from "./Utility";
+import { SFXConfig } from "./SFXConfig";
 
 const PATH_TEMP_SFX = Utility.PathCombine(os.tmpdir(),'sfx-cache');
 
@@ -249,6 +250,10 @@ export class GLSLTool{
     }
 
     public static async glslVerify(targetFile:string,source:GLSLFile):Promise<APIResult>{
+        if(!SFXConfig.GLSLANG_ENABLE){
+            return APIResult.Success();
+        }
+
         let fpath = Utility.PathCombine(PATH_TEMP_SFX,targetFile);
         if(!fs.existsSync(PATH_TEMP_SFX)){
             fs.mkdirSync(PATH_TEMP_SFX);
@@ -260,7 +265,7 @@ export class GLSLTool{
 
         fs.writeFileSync(fpath,sourceCode);
 
-        const glslangBin = Utility.GetAbsolutePath('tools/glslangValidator.exe');
+        const glslangBin = Utility.GetAbsolutePath(SFXConfig.GLSLANG_PATH);
         return new Promise((res,rej)=>{
             childProcess.exec(`${glslangBin} ${fpath}`, (error, stdout, stderr) => {
                 let suc = error == null && stdout == '' && stderr == '';

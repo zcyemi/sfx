@@ -18,7 +18,6 @@ export class SFXSourceVisotor extends AbstractParseTreeVisitor<any> implements S
     }
 
     public visitErrorNode(node: ErrorNode){
-        console.error(node.text);
         return this;
     }
 

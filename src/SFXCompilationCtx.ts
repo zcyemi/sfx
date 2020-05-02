@@ -308,8 +308,4 @@ export class SFXCompilationCtx{
         })
     }
 
-    private log(message?:any,...objs:any[]){
-        console.log(message,...objs);
-    }
-
 }

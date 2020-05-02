@@ -39,6 +39,7 @@ export class SFXInclude{
 
 export class SFXSource{
     public fileName:string;
+    public filePathName:string;
     public glslBlock?:string[];
     public includes?:SFXInclude[];
     public techniques?:SFXTechnique[];

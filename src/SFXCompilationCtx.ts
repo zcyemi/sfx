@@ -17,7 +17,7 @@ class SFXCompileResult{
     public static success(source:SFXSource){
         let ret = new SFXCompileResult();
         ret.success= true;
-        ret.fileName = source.fileName;
+        ret.fileName = source.filePathName;
         return ret;
     }
     
@@ -25,7 +25,7 @@ class SFXCompileResult{
         let ret = new SFXCompileResult();
         ret.success =false;
         ret.error = errmsg;
-        ret.fileName = source.fileName;
+        ret.fileName = source.filePathName;
         return ret;
     }
 }
@@ -71,6 +71,7 @@ class SFXFileInfo{
 
         if(result.success){
             self.source = result.data;
+            self.source.filePathName = self.filename;
             self.isDirty = false;
             return APIResultT.Success({sfx:self.source,file:self});
         }
@@ -208,7 +209,6 @@ export class SFXCompilationCtx{
                     changedSFXsource.push(r.data.sfx);
                 }
             })
-            
 
             changedSFXsource.map(s=>{
                 let fname = s.fileName;
@@ -290,6 +290,7 @@ export class SFXCompilationCtx{
             let result = await Promise.all(techTasks);
             returnResult.push(...result);
 
+
             let hasError = false;
             let errMsg:string[] = [];
 
@@ -299,11 +300,12 @@ export class SFXCompilationCtx{
                     errMsg.push(r.error);
                 }
             })
+
             if(hasError){
-                res(APIResultT.Error(errMsg.join('\n'),result));
+                res(APIResultT.Error(errMsg.join('\n'),returnResult));
             }
             else{
-                res(APIResultT.Success(result));
+                res(APIResultT.Success(returnResult));
             }
         })
     }

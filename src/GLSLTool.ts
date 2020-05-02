@@ -1,20 +1,58 @@
-import { ANTLRInputStream, CommonTokenStream, ConsoleErrorListener } from "antlr4ts";
-import { GLSLLexer } from "./glsl/GLSLLexer";
-import { GLSLParser } from "./glsl/GLSLParser";
-import { GLSLAnalysisVisitor, GLSLSegmentVisitor, GLSLSource, GLSLSegmentType, GLSLShaderType } from "./GLSLSource";
-import { Utility } from "./Utility";
+import { ANTLRInputStream, CommonTokenStream } from "antlr4ts";
+import * as childProcess from 'child_process';
 import * as fs from "fs";
 import os from 'os';
-import * as childProcess from 'child_process';
+import { GLSLLexer } from "./glsl/GLSLLexer";
+import { GLSLParser } from "./glsl/GLSLParser";
+import { GLSLFile, GLSLSeg, GLSLSegFunction, GLSLSegPreprocDefine,GLSLShaderType, GLSLSegType, GLSLSegDeclaration, GLSLSegDeclarationBlock } from "./GLSLFile";
+import { GLSLFileVisitor } from "./GLSLFileVisitor";
+import { Utility } from "./Utility";
 
 const PATH_TEMP_SFX = Utility.PathCombine(os.tmpdir(),'sfx-cache');
 
+
+export class GLSLDependencyInfo{
+    public entryFunctions:string[];
+
+    public touchedSegs:GLSLSeg[] = [];
+    public touchedDeclaration:string[] = [];
+    public touchedDefine:string[] = [];
+
+    public touchedDefineFunc:string[] = [];
+    public touchedFunctions:string[] = [];
+
+    public touchedTypes:string[] = [];
+
+    public touchedVarRef:string[] = [];
+
+    public addFunc(identifier:string):boolean{
+        return Utility.arrayAddDistinct(this.touchedFunctions,identifier);
+    }
+
+    public addType(typename:string):boolean{
+        return Utility.arrayAddDistinct(this.touchedTypes,typename);
+    }
+
+    public addDefineFunc(identifier:string):boolean{
+        return Utility.arrayAddDistinct(this.touchedDefineFunc,identifier);
+    }
+
+    /* return new variables */
+    public calVaraiblesRef(vars:string[]):string[]{
+        return Utility.ArrayExclude(vars,this.touchedVarRef);
+    }
+
+    public addVariable(variable:string){
+        this.touchedVarRef.push(variable);
+    }
+
+}
+
 export class GLSLTool{
 
-    public static parse(glsl:string,filename:string):Promise<GLSLSource>{
+    public static parseGLSLFile(glsl:string,filename:string):Promise<GLSLFile>{
         return new Promise((res,rej)=>{
             let input = new ANTLRInputStream(glsl);
-
             let lexer = new GLSLLexer(input);
             let tokenstream = new CommonTokenStream(lexer);
             let parse = new GLSLParser(tokenstream);
@@ -38,178 +76,189 @@ export class GLSLTool{
                 }
             });
 
-            let root = parse.external_declaration_list();
+            var visitor = new GLSLFileVisitor();
+            visitor.visit(parse.external_declaration_list());
+            let sourceFile = visitor.sourceFile;
+            sourceFile.fileName = filename;
+            res(sourceFile);
+        });
+    }
 
-            if(hasError){
-                rej(errmsg);
+    public static resolveDependency(source:GLSLFile,depInfo:GLSLDependencyInfo){
+        let pendingFunc:string[] = depInfo.entryFunctions.concat([]);
+        let pendingVarRef:string[] = [];
+        
+        while(true){
+            [pendingFunc,pendingVarRef] = GLSLTool.resolveDepSteps(pendingFunc,pendingVarRef,source,depInfo);
+            if(pendingFunc.length == 0 && pendingVarRef.length == 0){
+                break;
+            }
+        }
+    }
+
+    private static resolveDepSteps(pendingFunc:string[],pendingVariable:string[],source:GLSLFile,depInfo:GLSLDependencyInfo):[string[],string[]]{
+        let retPendingFunc:string[] = [];
+        let retPendingVariable:string[] = [];
+
+        pendingFunc.forEach(func=>{
+            let funcSeg:GLSLSeg = source.functions.get(func);
+            if(funcSeg == null) {
+                funcSeg = source.defineFunc.get(func);
+                if(funcSeg == null){
+                    throw new Error(`can not find function ${func}`);
+                }
+                else{
+                    let seg:GLSLSegPreprocDefine = <GLSLSegPreprocDefine>funcSeg;
+                    if(depInfo.addDefineFunc(func)){
+                        let subfunc = Utility.ArrayExclude(Utility.ArrayExclude(seg.functionRef,depInfo.touchedFunctions),depInfo.touchedDefineFunc);
+                        retPendingFunc.push(...subfunc);
+                        retPendingVariable.push(...depInfo.calVaraiblesRef(seg.variableRef));
+                    }
+                }
+            }
+            else{
+                let seg:GLSLSegFunction = <GLSLSegFunction>funcSeg;
+                if(depInfo.addFunc(func)){
+                    let subfunc = Utility.ArrayExclude(seg.functionRef,depInfo.touchedFunctions);
+                    retPendingFunc.push(...subfunc);
+                    retPendingVariable.push(...depInfo.calVaraiblesRef(seg.variableRef));
+                }
+                
+            }
+            depInfo.touchedSegs.push(funcSeg);
+        });
+
+        pendingVariable.forEach(v=>{
+
+            //decl
+            let dec = source.declaration.get(v);
+            if(dec!=null){
+                depInfo.touchedDeclaration.push(v);
+                depInfo.addVariable(v);
+
+                let ty = dec.typeName;
+                if(ty !=null){
+                    if(source.defineTypes.get(ty)!=null){
+                        depInfo.addType(ty);
+                    }
+                }
+
                 return;
             }
 
-            let source = new GLSLSource(parse,root);
-            source.source = glsl;
-            source.fileName = filename;
-            res(source);
-            return true;
+            //defines
+            let define = source.define.get(v);
+            if(define!=null){
+                depInfo.touchedDefine.push(v);
+                depInfo.addVariable(v);
+                retPendingFunc.push(...define.functionRef);
+                retPendingVariable.push(...define.variableRef);
+                return;
+            }
         });
-    }
 
-    public static analysis(source:GLSLSource):Promise<GLSLSource>{
-        return new Promise((res,rej)=>{
-            let visitor = new GLSLAnalysisVisitor(source);
-            visitor.visit(source.parser_root);
-            res(source);
-        });
-    }
-
-    public static segment(source:GLSLSource):Promise<GLSLSource>{
-        return new  Promise((res,rej)=>{
-            let visitor = new GLSLSegmentVisitor(source);
-            res(source);
-        })
-    }
-
-    public static analysisFunctions(source:GLSLSource,entryFunctions:string[]):string[]{
-        let info = source;
-        if(info == null) throw new Error('source not analysised');
-
-        let functionTouched:string[] = [];
-        functionTouched.push(...entryFunctions);
-
-        let funcs = info.functions;
-
-        let pendingFunctions:string[] = [];
-        let workingFunctions:string[] = [];
-        workingFunctions.push(...functionTouched);
-      
-        while(workingFunctions.length >0){
-            workingFunctions.forEach(f=>{
-                let fobj = funcs[f];
-                if(fobj!=null){
-                    let subfunc = fobj.funcInvokes;
-                    subfunc.forEach(t=>{
-                        if(functionTouched.includes(t))return;
-                        if(funcs[t] !=null){
-                            pendingFunctions.push(t);
+        //types
+        if(source.defineTypes.size != depInfo.touchedTypes.length){
+            let defTypes= source.defineTypes;
+            defTypes.forEach(ty=>{
+                if(!depInfo.touchedTypes.includes(ty.typeName)){
+                    let members = ty.typeInfo.member;
+                    for(let s=0;s<members.length;s++){
+                        let m = members[s].identifier;
+                        if(pendingVariable.includes(m)){
+                            depInfo.touchedTypes.push(ty.typeName);
+                            break;
                         }
-                    });
+                    }
+                    
                 }
             });
-            functionTouched.push(...pendingFunctions);
-            workingFunctions = pendingFunctions;
-            pendingFunctions = [];
         }
-        return functionTouched;
+
+        return [Utility.ArrayDistinct(retPendingFunc),Utility.ArrayDistinct(retPendingVariable)];
     }
 
-    public static analysisVariable(source:GLSLSource,variableRef:string[]){
-        let touchedVaraibles:string[] = [];
-        let functions = source.functions;
-
-        for (const key in functions) {
-            if (functions.hasOwnProperty(key)) {
-                const element = functions[key];
-                touchedVaraibles.push(element.funcId);
-            }
-        }
-        //Resolve Defines
-
-        let allVariables:string[] = [];
-        let validSegmentsType:GLSLSegmentType[] = [GLSLSegmentType.Declaration, GLSLSegmentType.Function, GLSLSegmentType.Preprocessor];
-        source.segments.forEach(seg=>{
-            if(validSegmentsType.includes(seg.segmentType)){
-                Utility.ArrayInsert(allVariables,seg.identifier);
-            }
-        })
-
-        var funcGetDep = function(segIdentifier:string):string[]{
-            let seg = source.getSegment(segIdentifier);
-            if(seg == null) return null;
-
-            switch(seg.segmentType){
-                case GLSLSegmentType.Function:
-                    return source.functions[segIdentifier].variableRef;
-                case GLSLSegmentType.Preprocessor:
-                    let define = source.define[segIdentifier];
-                    if(define == null) define = source.defineFunction[segIdentifier];
-                    if(define == null) return null;
-                    return define.parameterRef;
-            }
-        }
-
-        let resultTouched = Utility.ResolveDeps(touchedVaraibles,allVariables,funcGetDep);
-     
-    }
-
-    public static trimFunctions(source:GLSLSource,functionsKeep:string[]):GLSLSource{
-        let functions = source.functions;
-        functionsKeep.forEach(f=>{
-            delete functions.f;
-        });
-
-        source.segments =  source.segments.filter(seg=>{
-            if(seg.segmentType == GLSLSegmentType.Function){
-                if(!functionsKeep.includes(seg.identifier)){
-                    return false;
-                }
+    public static trimDeps(source:GLSLFile,depInfo:GLSLDependencyInfo):GLSLSeg[]{
+        return source.segments.filter(seg=>{
+            let segtype =seg.segType;
+            switch(segtype){
+                case GLSLSegType.Declaration:
+                    let id = (<GLSLSegDeclaration>seg).identifier;
+                    return depInfo.touchedDeclaration.includes(id);
+                case GLSLSegType.DeclarationBlock:
+                    return depInfo.touchedTypes.includes((<GLSLSegDeclarationBlock>seg).typeInfo.typeName);
+                case GLSLSegType.Function:
+                    return depInfo.touchedFunctions.includes((<GLSLSegFunction>seg).identifier);
+                case GLSLSegType.PreprocDefine:
+                    {
+                        let segdef = (<GLSLSegPreprocDefine>seg);
+                        let identifier =  segdef.identifier;
+                        if(segdef.isFunc){
+                            return depInfo.touchedDefineFunc.includes(identifier);
+                        }
+                        else{
+                            return depInfo.touchedDefine.includes(identifier);
+                        }
+                    }
             }
             return true;
         });
-
-        source.source = null;
-        return source;
     }
 
-    public static collapseToShader(source:GLSLSource,shaderType:GLSLShaderType,entry:string){
+    public static trimDepsApply(source:GLSLFile,depInfo:GLSLDependencyInfo){
+        source.segments = GLSLTool.trimDeps(source,depInfo);
+    }
+
+
+    public static collapseToShader(source:GLSLFile,shaderType:GLSLShaderType,entry:string){
         let segVaryings = source.segments.filter(seg=>{
-            return seg.segmentType == GLSLSegmentType.Declaration && seg.specifier == 'inout';
+            return seg.segType == GLSLSegType.Declaration && (<GLSLSegDeclaration>seg).specifier == 'inout';
         });
 
-
+        //process inout
         if(shaderType == GLSLShaderType.Vertex){
             segVaryings.forEach(seg=>{
-                seg.specifier = 'out';
-                seg.update();
+                let segdecl = <GLSLSegDeclaration>seg;
+                segdecl.specifier = 'out';
+                segdecl.update();
             });
         }
         else{
             segVaryings.forEach(seg=>{
-                seg.specifier = 'in';
-                seg.update();
+                let segdecl = <GLSLSegDeclaration>seg;
+                segdecl.specifier = 'in';
+                segdecl.update();
             });
         }
 
+        //process entry
         source.segments.map(seg=>{
-            if(seg.segmentType == GLSLSegmentType.Function){
-                if(seg.identifier == entry){
-                    seg.identifier= 'main';
+            if(seg.segType == GLSLSegType.Function){
+                let segfunc = <GLSLSegFunction> seg;
+                if(segfunc.identifier == entry){
+                    segfunc.identifier= 'main';
                 }
             }
         })
 
-        source.source = null;
-    }
-
-    private static glslVerifyGetTempFolder(){
-        return 
+        source.glslSource = null;
     }
 
     public static glslVerifyClearCache(){
 
     }
 
-    public static async glslVerify(targetFile:string,source:GLSLSource):Promise<boolean>{
+    public static async glslVerify(targetFile:string,source:GLSLFile):Promise<boolean>{
         let fpath = Utility.PathCombine(PATH_TEMP_SFX,targetFile);
         if(!fs.existsSync(PATH_TEMP_SFX)){
             fs.mkdirSync(PATH_TEMP_SFX);
         }
 
-        let sourceCode = source.getSource();
+        let sourceCode = source.getGLSLSource();
         sourceCode = '#version 300 es\n'+ sourceCode;
 
 
         fs.writeFileSync(fpath,sourceCode);
-
-        console.log(fpath);
 
         const glslangBin = Utility.GetAbsolutePath('tools/glslangValidator.exe');
         return new Promise((res,rej)=>{

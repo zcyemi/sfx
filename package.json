@@ -21,6 +21,6 @@
     "glsl": "cd ./src/glsl && antlr4ts -visitor ../../grammar/GLSL.g4",
     "gles": "cd ./src/gles && antlr4ts -visitor ../../grammar/GLES.g4",
     "start": "node ./dist/index.js",
-    "test": "mocha -r ts-node/register ./tests/**.test.ts"
+    "test": "mocha -r ts-node/register ./spec/**.spec.ts"
   }
 }

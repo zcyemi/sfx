@@ -35,4 +35,14 @@ export class GLSLFormatter extends AbstractParseTreeVisitor<string> implements G
     aggregateResult(aggregate: string, nextResult: string): string{
         return aggregate + nextResult;
     }
+
+    private static s_inst:GLSLFormatter;
+
+    public static get instance():GLSLFormatter{
+        let fmt = GLSLFormatter.s_inst;
+        if(fmt == null){
+            fmt = new GLSLFormatter();
+        }
+        return fmt;
+    }
 }

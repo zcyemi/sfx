@@ -226,29 +226,33 @@ export class SFXCompilationCtx{
                     }
                 })
             });
-
-            this.log("touched sfx",touchedFname);
             // link all techniques
 
             const techniques = this.techniques;
 
-            touchedFname.forEach(async sfxname=>{
+            let techTasks:Promise<boolean>[] = touchedFname.map(sfxname=>{
 
-                let sfx = this.m_sourceSFX.get(sfxname);
+                return new Promise(async (res,rej)=>{
+
+                    let sfx = this.m_sourceSFX.get(sfxname);
                 
-                let sfxTechniques:SFXShaderTechnique[];
-                try{
-                    sfxTechniques = await SFXTool.parseTechnique(sfx,this.m_sourceSFX);
-                }catch(e){
-                    res(false);
-                    return;
-                }
+                    let sfxTechniques:SFXShaderTechnique[];
+                    try{
+                        sfxTechniques = await SFXTool.parseTechnique(sfx,this.m_sourceSFX);
+                    }catch(e){
+                        res(false);
+                        return;
+                    }
+    
+                    sfxTechniques.forEach(t=>{
+                        techniques.set(t.name,t);
+                    });
 
-                sfxTechniques.forEach(t=>{
-                    techniques.set(t.name,t);
+                    res(true);
                 });
             })
 
+            let result = await Promise.all(techTasks);
             res(true);
         })
     }

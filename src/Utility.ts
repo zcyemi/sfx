@@ -26,9 +26,10 @@ export class APIResult{
 
 export class Utility{
 
-    public static arrayAddDistinct<T>(ary:T[],o:T){
-        if(ary.indexOf(o) >=0) return;
+    public static arrayAddDistinct<T>(ary:T[],o:T):boolean{
+        if(ary.indexOf(o) >=0) return false;
         ary.push(o);
+        return true;
     }
 
     public static md5hash(str:string):string{
@@ -42,11 +43,33 @@ export class Utility{
     }
 
     public static ArrayConcatDistainct<T>(ary:T[],b:T[]){
+        if(b == null || b.length== 0) return;
         b.forEach(obj=>{
             if(obj == null) return;
             if(ary.indexOf(obj) >=0) return;
             ary.push(obj);
         })
+    }
+
+    public static ArrayDistinct<T>(ary:T[]):T[]{
+        if(ary == null) return null;
+        if(ary.length <=1) return ary.concat([]);
+
+        let ret = ary.sort();
+
+        let temp:T = ary[0];
+        let writeIndex = 1;
+        const len = ret.length;
+
+        for(let t=1;t<len;t++){
+            const val = ary[t];
+            if(val != temp){
+                temp = val;
+                ary[writeIndex] = val;
+                writeIndex ++;
+            }
+        }
+        return ret.slice(0,writeIndex);
     }
 
     public static ResolveDeps(startItems:string[],allItems:string[],funcGetDep:(item:string)=>string[]):string[]{
@@ -147,6 +170,19 @@ export class Utility{
         return ret;
     }
 
+    public static ArrayExclude<T>(a:T[],b:T[]):T[]{
+        if(a == null || a.length == 0) return [];
+        if(b == null || b.length == 0) return a.concat([]);
+
+        let ret = [];
+        a.forEach(t=>{
+            if(!b.includes(t)){
+                ret.push(t);
+            }
+        });
+        return ret;
+    }
+
     public static clone(item:any) {
         if (!item) { return item; } // null, undefined values check
     
@@ -166,30 +202,28 @@ export class Utility{
                 item.forEach(function(child, index, array) { 
                     result[index] = Utility.clone( child );
                 });
+
             } else if (typeof item == "object") {
                 // testing that this is DOM
                 if (item.nodeType && typeof item.cloneNode == "function") {
                     result = item.cloneNode( true );    
+
                 } else if (!item.prototype) { // check that this is a literal
                     if (item instanceof Date) {
                         result = new Date(item);
                     } else {
                         // it is an object literal
-                        result = {};
+                        result = Object.create(Object.getPrototypeOf(item));
                         for (var i in item) {
                             result[i] = Utility.clone( item[i] );
                         }
+
                     }
                 } else {
-                    // depending what you would like here,
-                    // just keep the reference, or create new object
-                    if (false && item.constructor) {
-                        // would not advice to do that, reason? Read below
-                        result = new item.constructor();
-                    } else {
-                        result = item;
-                    }
+                    result = item;
                 }
+
+
             } else {
                 result = item;
             }

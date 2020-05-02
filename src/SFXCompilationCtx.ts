@@ -88,6 +88,7 @@ export class SFXShaderTechnique extends SFXTechnique{
     public glsl_vs:string;
     public glsl_ps:string;
     public technique:SFXTechnique;
+    public sfxName:string;
 }
 
 export class SFXCompilationCtx{
@@ -142,7 +143,8 @@ export class SFXCompilationCtx{
         
     }
 
-    private getSources(){
+    public getTechniquesBySFXname(sfxname:string):SFXShaderTechnique[]{
+        return [...this.techniques.values()].filter(t=>t.sfxName == sfxname);
     }
 
     public updateSources(files:SFXFile[]){

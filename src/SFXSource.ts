@@ -235,6 +235,7 @@ export class SFXTool{
                             technique.name = t.name;
                             technique.glsl_vs = sourceVS.getGLSLSource();
                             technique.glsl_ps = sourcePS.getGLSLSource();
+                            technique.sfxName = sfx.fileName;
                             retTechniques.push(technique);
                         }
                         res(result);

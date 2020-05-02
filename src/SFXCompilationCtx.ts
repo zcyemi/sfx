@@ -1,5 +1,5 @@
 import { SFXSource, SFXTool, SFXTechnique } from "./SFXSource";
-import { Utility } from "./Utility";
+import { Utility, APIResultT } from "./Utility";
 
 
 export interface SFXFile{
@@ -11,22 +11,21 @@ export interface SFXFile{
 class SFXCompileResult{
     public success:boolean;
     public error:string;
-    public data:any;
+    public fileName:string;
 
-    public sfxSource:SFXSource;
 
-    public static success(data?:any){
+    public static success(source:SFXSource){
         let ret = new SFXCompileResult();
         ret.success= true;
-        ret.data = data;
+        ret.fileName = source.fileName;
         return ret;
     }
     
-    public static error(errmsg:string){
+    public static error(errmsg:string,source:SFXSource){
         let ret = new SFXCompileResult();
         ret.success =false;
         ret.error = errmsg;
-
+        ret.fileName = source.fileName;
         return ret;
     }
 }
@@ -65,13 +64,19 @@ class SFXFileInfo{
         return true;
     }
 
-    public parseSource():Promise<{sfx:SFXSource,file:SFXFileInfo}>{
+    public async parseSource():Promise<APIResultT<{sfx:SFXSource,file:SFXFileInfo}>>{
         var self =this;
-        return SFXTool.parseSFX(this.content,this.filename).then(val=>{
-            self.source = val;
+
+        let result = await SFXTool.parseSFX(this.content,this.filename);
+
+        if(result.success){
+            self.source = result.data;
             self.isDirty = false;
-            return {sfx:val,file:self};
-        });
+            return APIResultT.Success({sfx:self.source,file:self});
+        }
+        else{
+            return APIResultT.Error(result.error,{sfx:null,file:self});
+        }
     }
 
 }
@@ -158,28 +163,52 @@ export class SFXCompilationCtx{
         files.forEach(f=>this.updateInclude(f.filename,f.content));
     }
 
-    public compile():Promise<boolean>{
+    public compile():Promise<APIResultT<SFXCompileResult[]>>{
 
-        return new Promise<boolean>(async (res,rej)=>{
-            let tasks:Promise<{sfx:SFXSource,file:SFXFileInfo}>[] = [];
+        return new Promise(async (res,rej)=>{
+            let tasks:Promise<APIResultT<{sfx:SFXSource,file:SFXFileInfo}>>[] = [];
             this.m_sourceFiles.forEach((val,key)=>{
                 if(!val.isDirty) return;
                 tasks.push(val.parseSource());
             });
 
-            let results:{sfx:SFXSource,file:SFXFileInfo}[] = null;
+            let results:APIResultT<{sfx:SFXSource,file:SFXFileInfo}>[] = null;
             try{
                 results = await Promise.all(tasks);
             }
             catch(e){
-                res(false);
+                res(APIResultT.Error(e))
                 return;
             }
 
             // update sfx deps
+            let returnResult:SFXCompileResult[] = [];
 
             let changedSFXIndex:string[] = [];
-            let changedSFXsource:SFXSource[] = results.map(r=>r.sfx);
+            let changedSFXsource:SFXSource[] =[];
+
+
+            results.forEach(r=>{
+
+                if(!r.success){
+                    let sfxcr = new SFXCompileResult();
+                    let err = r.error;
+                    if(err == null) {
+                        err = 'unknown error';
+                    }
+                    else{
+                        err = err.toString();
+                    }
+                    sfxcr.error = err;
+                    sfxcr.fileName = r.data.file.filename;
+                    sfxcr.success = false;
+                    returnResult.push(sfxcr);
+                }
+                else{
+                    changedSFXsource.push(r.data.sfx);
+                }
+            })
+            
 
             changedSFXsource.map(s=>{
                 let fname = s.fileName;
@@ -208,7 +237,6 @@ export class SFXCompilationCtx{
                 });
             });
 
-
             let dirtySFX:SFXSource[] = changedSFXsource.concat();
 
             let touchedFname:string[] = [];
@@ -230,30 +258,53 @@ export class SFXCompilationCtx{
 
             const techniques = this.techniques;
 
-            let techTasks:Promise<boolean>[] = touchedFname.map(sfxname=>{
+            let techTasks:Promise<SFXCompileResult>[] = touchedFname.map(sfxname=>{
 
                 return new Promise(async (res,rej)=>{
 
                     let sfx = this.m_sourceSFX.get(sfxname);
                 
-                    let sfxTechniques:SFXShaderTechnique[];
+                    let sfxTechniques:APIResultT<SFXShaderTechnique[]> = null;
                     try{
                         sfxTechniques = await SFXTool.parseTechnique(sfx,this.m_sourceSFX);
                     }catch(e){
-                        res(false);
+                        res(SFXCompileResult.error(e.errmsg,sfx));
                         return;
                     }
-    
-                    sfxTechniques.forEach(t=>{
-                        techniques.set(t.name,t);
-                    });
 
-                    res(true);
+                    if(!sfxTechniques.success){
+                        res(SFXCompileResult.error(sfxTechniques.error.toString(),sfx))
+                        return;
+                    }
+
+                    let tdata = sfxTechniques.data;
+                    if(tdata!=null){
+                        tdata.forEach(tech=>{
+                            techniques.set(tech.name,tech);
+                        });
+                    }
+                    res(SFXCompileResult.success(sfx));
                 });
             })
 
             let result = await Promise.all(techTasks);
-            res(true);
+            returnResult.push(...result);
+
+            let hasError = false;
+            let errMsg:string[] = [];
+
+            returnResult.forEach(r=>{
+                if(!r.success){
+                    hasError =true;
+                    errMsg.push(r.error);
+                }
+            })
+            if(hasError){
+                res(APIResultT.Error(errMsg.join('\n'),result));
+            }
+            else{
+                res(APIResultT.Success(result));
+            }
         })
     }
 

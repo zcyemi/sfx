@@ -6,7 +6,7 @@ import { GLSLLexer } from "./glsl/GLSLLexer";
 import { GLSLParser } from "./glsl/GLSLParser";
 import { GLSLFile, GLSLSeg, GLSLSegFunction, GLSLSegPreprocDefine,GLSLShaderType, GLSLSegType, GLSLSegDeclaration, GLSLSegDeclarationBlock } from "./GLSLFile";
 import { GLSLFileVisitor } from "./GLSLFileVisitor";
-import { Utility } from "./Utility";
+import { Utility, APIResult } from "./Utility";
 
 const PATH_TEMP_SFX = Utility.PathCombine(os.tmpdir(),'sfx-cache');
 
@@ -72,7 +72,7 @@ export class GLSLTool{
                     let linee = line + 1 > lineAry.length? lineAry.length:line;
                     let linectx  =lineAry.splice(lines,linee-lines+1);
 
-                    console.error([filename,errmsg,offsymbol,linectx.join('\n')]);
+                    // console.error([filename,errmsg,offsymbol,linectx.join('\n')]);
                 }
             });
 
@@ -248,7 +248,7 @@ export class GLSLTool{
 
     }
 
-    public static async glslVerify(targetFile:string,source:GLSLFile):Promise<boolean>{
+    public static async glslVerify(targetFile:string,source:GLSLFile):Promise<APIResult>{
         let fpath = Utility.PathCombine(PATH_TEMP_SFX,targetFile);
         if(!fs.existsSync(PATH_TEMP_SFX)){
             fs.mkdirSync(PATH_TEMP_SFX);
@@ -264,10 +264,13 @@ export class GLSLTool{
         return new Promise((res,rej)=>{
             childProcess.exec(`${glslangBin} ${fpath}`, (error, stdout, stderr) => {
                 let suc = error == null && stdout == '' && stderr == '';
-                if (stdout != '') console.log(`[${targetFile}] stdout:`,stdout);
-                if (stderr != '') console.error(`[${targetFile}] stderr:`,stderr);
-                if(!suc) console.error(fpath);
-                res(suc);
+                if(!suc) {
+                    // if (stdout != '') console.log(`[${targetFile}] stdout:`,stdout);
+                    res(APIResult.Error(`${stderr}\n${stdout}`));
+                }
+                else{
+                    res(APIResult.Success());
+                }
             });
         });
     }

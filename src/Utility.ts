@@ -4,7 +4,7 @@ import * as fs from 'fs';
 
 export class APIResult{
     public success:boolean;
-    public error:Error;
+    public error:Error |string;
     public data?:any;
 
     public static Success(data?:any){
@@ -14,10 +14,31 @@ export class APIResult{
         return ret;
     }
 
-    public static error(errmsg:string):APIResult{
+    public static Error(err:string|Error):APIResult{
         let ret = new APIResult();
         ret.success =false;
-        ret.error = new Error(errmsg);
+        ret.error = err;
+        return ret;
+    }
+}
+
+
+export class APIResultT<T> extends APIResult{
+    public data?:T;
+
+    public static Success<T>(data?:T){
+        let ret = new APIResultT<T>();
+        ret.success = true;
+        ret.data = data;
+        return ret;
+    }
+
+    
+    public static Error<T>(err:Error|string,data?:T):APIResultT<T>{
+        let ret = new APIResultT<T>();
+        ret.success =false;
+        ret.data = data;
+        ret.error = err;
         return ret;
     }
 }

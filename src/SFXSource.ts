@@ -4,7 +4,7 @@ import { SFXLexer } from "./sfx/SFXLexer";
 import { SFXParser } from "./sfx/SFXParser";
 import { SFXShaderTechnique } from "./SFXCompilationCtx";
 import { SFXSourceVisotor } from "./SFXSourceVisotor";
-import { Utility } from "./Utility";
+import { Utility, APIResultT, APIResult } from "./Utility";
 import { GLSLFile, GLSLShaderType } from "./GLSLFile";
 
 export class SFXTechniquePipeline{
@@ -72,63 +72,61 @@ export class SFXSource{
 
 export class SFXTool{
 
-    public static parseSFX(source:string,file:string):Promise<SFXSource>{
+    public static parseSFX(source:string,file:string):Promise<APIResultT<SFXSource>>{
         return new Promise((res,rej)=>{
             if(source == null){
-                return rej('source is null');
+                res(APIResultT.Error('source is null'));
+                return;
             }
             let inputstream = new ANTLRInputStream(source);
             let lexer = new SFXLexer(inputstream);
             let tokenstream = new CommonTokenStream(lexer);
             let parse = new SFXParser(tokenstream);
             var hasError = false;
-            let errmsg = null;
+            let errmsg:string[] = [];
             parse.addErrorListener({
                 syntaxError:(rec,offsymbol,line,pos,msg,e)=>{
                     hasError = true;
-                    errmsg = `sfx error: (${line}:${pos}) ${msg}  file:${file}`;
-                    console.error(errmsg);
+                    errmsg.push(`sfx error: (${line}:${pos}) ${msg}  file:${file}`);
                 }
             })
             
             let program = parse.program();
-
-            if(hasError){
-                rej(errmsg);
-                return;
-            }
-
             let visitor = new SFXSourceVisotor();
             let sfxsource= visitor.visit(program);
-            res(sfxsource);
+            if(hasError){
+                res(APIResultT.Error(errmsg.join('\n')))
+                return;
+            }
+            res(APIResultT.Success(sfxsource));
         });
     }
 
-    private static extractDependency(sfx:SFXSource,deps?:Map<string,SFXSource>):Promise<string[]>{
+    private static extractDependency(sfx:SFXSource,deps?:Map<string,SFXSource>):Promise<APIResultT<string[]>>{
         return new Promise(async (res,rej)=>{
             let deplist:string[] = [];
 
             let result = await SFXTool.extractDependencyImpl(sfx,deplist,deps);
 
-            if(result){
-                res(deplist);
+            if(result.success){
+                res(APIResultT.Success(deplist));
             }
             else{
-                rej(`Error: parse dep failed: ${sfx.fileName}`);
+                res(APIResultT.Error(result.error));
             }
         });
     }
 
-    private static extractDependencyImpl(sfx:SFXSource,depList:string[],deps?:Map<string,SFXSource>):Promise<boolean>{
+    private static extractDependencyImpl(sfx:SFXSource,depList:string[],deps?:Map<string,SFXSource>):Promise<APIResult>{
         return new Promise(async (res,rej)=>{
             let includes = sfx.includes;
             if(includes == null || includes.length == 0){
-                res(true);
-                return null;
+                res(APIResult.Success());
+                return;
             }
 
             if(deps == null){
-                rej(`Error: sfxsource ${sfx.fileName} require deps: ${includes.map(t=>t.fullName)}`);
+                res(APIResult.Error(`Error: sfxsource ${sfx.fileName} require deps: ${includes.map(t=>t.fullName)}`))
                 return;
             }
 
@@ -136,30 +134,37 @@ export class SFXTool{
                 const inc = includes[t];
                 let fname = inc.fullName;
                 if(depList.includes(fname)){
-                    res(true);
+                    res(APIResult.Success());
                     return;
                 }
 
                 let depsfx = deps.get(fname);
                 if(depsfx == null){
-                    rej(`Error: sfxsource ${depsfx.fileName} require dep: ${inc.fullName}`);
+                    res(APIResult.Error(`Error: sfxsource ${sfx.fileName} require dep: ${inc.fullName}`))
                     return;
                 }
                 if(!await this.extractDependencyImpl(depsfx,depList,deps)){
-                    rej(`Error: parse dep failed: ${fname}`);
+                    res(APIResult.Error(`Error: parse dep failed: ${fname}`));
                     return;
                 }
 
                 depList.push(fname);
             }
-            res(true);
+            res(APIResult.Success());
         });
     }
 
-    public static parseTechnique(sfx:SFXSource,deps?:Map<string,SFXSource>):Promise<SFXShaderTechnique[]>{
+    public static parseTechnique(sfx:SFXSource,deps?:Map<string,SFXSource>):Promise<APIResultT<SFXShaderTechnique[]>>{
         return new Promise(async (res,rej)=>{
-            let depList = await SFXTool.extractDependency(sfx,deps);
+            let depresult = await SFXTool.extractDependency(sfx,deps);
+            if(!depresult.success){
+                res(APIResultT.Error(depresult.error))
+                return;
+            }
             let glslblocks:string[] = [];
+
+            var depList = depresult.data;
+
             if(depList!=null && depList.length >0){
                 depList.forEach(fname=>{
 
@@ -176,7 +181,7 @@ export class SFXTool{
 
             glslsource = glslsource.trim();
             if(glslsource == ''){
-                res([])
+                res(APIResultT.Error(`source is null: ${sfx.fileName}`))
                 return;
             }
 
@@ -186,13 +191,12 @@ export class SFXTool{
                 source = await GLSLTool.parseGLSLFile(glslsource,sfx.fileName);
             }
             catch(e){
-                console.log(e);
-                res([]);
+                res(APIResultT.Error(e))
                 return;
             }
 
             let techniques = sfx.techniques;
-            let tasks:Promise<boolean>[] = [];
+            let tasks:Promise<APIResult>[] = [];
             let retTechniques:SFXShaderTechnique[] = [];
 
             if(techniques!=null){
@@ -214,16 +218,17 @@ export class SFXTool{
                     GLSLTool.collapseToShader(sourceVS,GLSLShaderType.Vertex,t.vsEntry);
                     GLSLTool.collapseToShader(sourcePS,GLSLShaderType.Fragment,t.psEntry);
 
-                    let buildtechnique = new Promise<boolean>(async (res,rej)=>{
+                    let buildtechnique = new Promise<APIResult>(async (res,rej)=>{
 
-                        let suc = GLSLTool.glslVerify(source.fileName+'.vert',sourceVS);
-                        if(!suc){
-                            res(false);
+                        let result = await GLSLTool.glslVerify(source.fileName+'.vert',sourceVS);
+                        if(!result.success){
+                            res(result);
+                            return;
                         }
 
-                        suc = GLSLTool.glslVerify(source.fileName+'.frag',sourcePS);
+                        result = await GLSLTool.glslVerify(source.fileName+'.frag',sourcePS);
 
-                        if(suc){
+                        if(result.success){
                             let technique:SFXShaderTechnique = new SFXShaderTechnique();
                             technique.technique = t;
                             technique.name = t.name;
@@ -231,14 +236,29 @@ export class SFXTool{
                             technique.glsl_ps = sourcePS.getGLSLSource();
                             retTechniques.push(technique);
                         }
-                        res(suc);
+                        res(result);
                     })
                     tasks.push(buildtechnique);
                 })
             }
 
             let validateResult = await Promise.all(tasks);
-            res(retTechniques);
+
+            let suc = true;
+            let errMsg:string[] = [];
+            validateResult.forEach(r=>{
+                if(!r.success){
+                    suc =false;
+                    errMsg.push(r.error.toString());
+                }
+            });
+
+            if(suc){
+                res(APIResultT.Success(retTechniques));
+            }
+            else{
+                res(APIResultT.Error(errMsg.join('\n'),retTechniques));
+            }
         });
     }
     public static optimizeGLSL(glsl:string){

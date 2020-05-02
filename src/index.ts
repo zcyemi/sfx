@@ -1,63 +1,67 @@
-import * as fs from "fs";
-import { SFXCompilationCtx } from './SFXCompilationCtx';
-import { SFXFileResolver } from './SFXFileResolver';
-import { SFXFileWatcher } from './SFXFileWatcher';
-import { Utility } from './Utility';
+export * from './SFXCompilationCtx';
+export * from './SFXFileResolver';
+export * from './SFXSource';
+export * from './SFXFileWatcher';
+// import * as fs from "fs";
+// import { SFXCompilationCtx } from './SFXCompilationCtx';
+// import { SFXFileResolver } from './SFXFileResolver';
+// import { SFXFileWatcher } from './SFXFileWatcher';
+// import { Utility } from './Utility';
 
 
-function sfxTest() {
+// function sfxTest() {
 
 
-    const watchPath = 'samples';
-    const folderPath = Utility.GetAbsolutePath(watchPath)
+//     const watchPath = 'samples';
+//     const folderPath = Utility.GetAbsolutePath(watchPath)
 
-    var compileCtx = new SFXCompilationCtx();
-    let res = new SFXFileResolver(folderPath);
-    res.updateCompileCtx(compileCtx);
+//     var compileCtx = new SFXCompilationCtx();
+//     let res = new SFXFileResolver(folderPath);
+//     res.updateCompileCtx(compileCtx);
 
-    compileCtx.compile().then((r) => { });
+//     compileCtx.compile().then((r) => { });
 
-    let sfxWatcher = new SFXFileWatcher(folderPath);
-
-
-    sfxWatcher.onFileChange = async (data) => {
-        if (data == null || data.length == 0) return;
+//     let sfxWatcher = new SFXFileWatcher(folderPath);
 
 
-        data.forEach(evt => {
-            const fname = evt.fileName;
-            const fpath = Utility.PathCombine(folderPath, fname);
+//     sfxWatcher.onFileChange = async (data) => {
+//         if (data == null || data.length == 0) return;
 
 
-            switch (evt.type) {
-                case 'change':
-                    {
-                        const fstat = fs.statSync(fpath);
-                        if (!fstat.isFile()) return;
-                        let file = fs.readFileSync(fpath, "utf8");
-                        compileCtx.updateSource(fname, file);
-                    }
-                    break;
-                case 'rename':
-                    {
-                        if (fs.existsSync(fpath)) {
-                            if (fs.statSync(fpath).isDirectory()) return;
-
-                            let file = fs.readFileSync(fpath, "utf8");
-                            compileCtx.updateSource(fname, file);
-                        }
-                        else {
-                            compileCtx.removeSource(fname);
-                        }
-                    }
-                    break;
-            }
-
-        });
-
-        let result = await compileCtx.compile();
-    }
-}
+//         data.forEach(evt => {
+//             const fname = evt.fileName;
+//             const fpath = Utility.PathCombine(folderPath, fname);
 
 
-sfxTest();
+//             switch (evt.type) {
+//                 case 'change':
+//                     {
+//                         const fstat = fs.statSync(fpath);
+//                         if (!fstat.isFile()) return;
+//                         let file = fs.readFileSync(fpath, "utf8");
+//                         compileCtx.updateSource(fname, file);
+//                     }
+//                     break;
+//                 case 'rename':
+//                     {
+//                         if (fs.existsSync(fpath)) {
+//                             if (fs.statSync(fpath).isDirectory()) return;
+
+//                             let file = fs.readFileSync(fpath, "utf8");
+//                             compileCtx.updateSource(fname, file);
+//                         }
+//                         else {
+//                             compileCtx.removeSource(fname);
+//                         }
+//                     }
+//                     break;
+//             }
+
+//         });
+
+//         let result = await compileCtx.compile();
+//     }
+// }
+
+
+// sfxTest();

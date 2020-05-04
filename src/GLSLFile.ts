@@ -1,4 +1,5 @@
 import { Utility } from "./Utility";
+import { GLSLTool } from "./GLSLTool";
 
 const GLSL_INTERNAL_FUNC:string[] = [
     'vec4','vec3','vec2','mat2','mat3','mat4','ivec2','ivec3','ivec4','float','int','bool',
@@ -110,44 +111,9 @@ export class GLSLSegPreprocDefine extends GLSLSeg{
     public parseExpr(){
         let expr = this.valueExpr;
         if(expr == null || expr == '')return;
-        this.parseExpression(expr,this.functionRef,this.variableRef);
-    }
 
-    private parseExpression(text:string,funcRef:string[],variableRef:string[]){
-        text = text.trim();
-        let matchFunc =  text.match(/([\d\w_]+)\s*\((.+)\)/);
-        if(matchFunc!=null){
-            let funcId = matchFunc[1];
-            if(!GLSL_INTERNAL_FUNC_MAP[funcId]){
-                funcRef.push(funcId);
-            }
-            
-            this.parseExpression(matchFunc[2],funcRef,variableRef);
-            text = text.replace(matchFunc[0],"");
-            this.parseExpression(text,funcRef,variableRef);
-            return;
-        }
-
-        text = text.replace(/(\*|\+|,|-|\/)/gm,' ');
-
-        let subtext = text.split(' ').filter(t=>t!='');
-        subtext.forEach(t=>{
-            t = t.trim();
-            if(t.match(/^\d*(\.\d*)?$/gm)){
-                return;
-            };
-            if(t.indexOf('.')>=0){
-                let ts = t.split('.')[0];
-
-                if(variableRef.indexOf(ts) <0){
-                    variableRef.push(ts)
-                }
-                variableRef.push(ts[0]);
-            }
-            else{
-                variableRef.push(t);
-            }
-        })
+        GLSLTool.ParseExpr(expr,this.functionRef,this.variableRef);
+        this.functionRef = Utility.ArrayExclude(this.functionRef,GLSL_INTERNAL_FUNC);
     }
 }
 
@@ -171,6 +137,8 @@ export class GLSLSegPrecision extends GLSLSeg{
 
 export class GLSLSegFunction extends GLSLSeg{
     public identifier:string;
+
+    public textIdentifier:string;
 
     public variableDef:Map<string,GLSLVariableInfo> = new Map();
     public variableRef:string[] = [];
@@ -199,6 +167,14 @@ export class GLSLSegFunction extends GLSLSeg{
         if(GLSL_INTERNAL_FUNC_MAP[identifier]) return;
         Utility.ArrayInsert(this.functionRef,identifier);
     }
+
+    public setNewFunctionName(fname:string){
+        let regexp = new RegExp(`\\s${this.identifier}\\(`);
+        this.text = this.text.replace(regexp,` ${fname}(`);
+        this.identifier = fname;
+    }
+
+
 }
 
 export class GLSLFile{

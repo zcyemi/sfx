@@ -1,6 +1,8 @@
 
 import fs from 'fs';
 
+import { expect} from 'chai';
+
 import {GLSLTool, GLSLDependencyInfo} from '../src/GLSLTool';
 import { GLSLFile, GLSLShaderType, GLSLSegType } from '../src/GLSLFile';
 import { SFXConfig } from '../src/SFXConfig';
@@ -45,6 +47,19 @@ describe("primitive",()=>{
         var glsl = loadSource("spec/glsl/uniform.glsl");
         var ret = await GLSLTool.parseGLSLFile(glsl,"uniform.glsl");
     })
+
+    it("nested-preprocessor-dep",async ()=>{
+        var glsl = loadSource("spec/glsl/nested_dep.glsl");
+        var ret = await GLSLTool.parseGLSLFile(glsl,"nested_dep.glsl");
+
+        var dep = new GLSLDependencyInfo();
+        dep.entryFunctions = ['vertex'];
+        GLSLTool.resolveDependency(ret,dep);
+
+        let seg = ret.defineFunc.get('CAL_SHADOW_COORD');
+        
+        expect(seg.variableRef.indexOf('uLightMtx0')).to.gte(0);
+    })
 });
 
 describe("glsl",()=>{
@@ -63,4 +78,28 @@ describe('glsl-trim',()=>{
         await validateShader(file.clone(),'fragment',GLSLShaderType.Fragment);
     });
 
+});
+
+
+
+describe('glsl-expr',()=>{
+    var verifyExpr = function(item:string,text:string,funtionRef:string[],variableRef:string[]){
+        it(item,()=>{
+            let resultFunc = [];
+            let resultVari = [];
+            GLSLTool.ParseExpr(text,resultFunc,resultVari);
+    
+            resultFunc = resultFunc.sort();
+            resultVari = resultVari.sort();
+            funtionRef = funtionRef.sort();
+            variableRef = variableRef.sort();
+    
+            expect(JSON.stringify(resultFunc)).to.equal(JSON.stringify(funtionRef),`function not match: ${text}`);
+            expect(JSON.stringify(resultVari)).to.equal(JSON.stringify(variableRef),`variable not match: ${text}`);
+        })
+    }
+
+    verifyExpr('variable-mul','MATRIX_P*MATRIX_MV',[],['MATRIX_P','MATRIX_MV']);
+    verifyExpr('simple-func','TEST_FUNC(a,b,c)',['TEST_FUNC'],['a','b','c']);
+    verifyExpr('complex1','x.shadow_coord=uLightMtx0*vec4(pos.xyz,1.0)',['vec4'],['x','uLightMtx0','pos'])
 });

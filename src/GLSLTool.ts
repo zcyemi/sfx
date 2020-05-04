@@ -242,7 +242,7 @@ export class GLSLTool{
             if(seg.segType == GLSLSegType.Function){
                 let segfunc = <GLSLSegFunction> seg;
                 if(segfunc.identifier == entry){
-                    segfunc.identifier= 'main';
+                    segfunc.setNewFunctionName('main');
                 }
             }
         })
@@ -267,7 +267,6 @@ export class GLSLTool{
         let sourceCode = source.getGLSLSource();
         sourceCode = '#version 300 es\n'+ sourceCode;
 
-
         fs.writeFileSync(fpath,sourceCode);
 
         const glslangBin = Utility.GetAbsolutePath(SFXConfig.GLSLANG_PATH);
@@ -284,4 +283,43 @@ export class GLSLTool{
             });
         });
     }
+
+    public static ParseExpr(text:string,funcRef:string[],variableRef:string[]){
+        if(text == null || text == '') return;
+        text = text.trim();
+        let matchFunc =  text.match(/([\d\w_]+)\s*\((.+)\)/);
+        if(matchFunc!=null){
+            let funcId = matchFunc[1];
+            if(funcRef.indexOf(funcId)<0){
+                funcRef.push(funcId);
+            }
+
+            GLSLTool.ParseExpr(matchFunc[2],funcRef,variableRef);
+            text = text.replace(matchFunc[0],"");
+            GLSLTool.ParseExpr(text,funcRef,variableRef);
+            return;
+        }
+
+        text = text.replace(/(\*|\+|,|-|\/|=)/gm,' ');
+
+        let subtext = text.split(' ').filter(t=>t!='');
+        subtext.forEach(t=>{
+            t = t.trim();
+            if(t.match(/^\d*(\.\d*)?$/gm)){
+                return;
+            };
+            if(t.indexOf('.')>=0){
+                let ts = t.split('.')[0];
+                if(variableRef.indexOf(ts) <0){
+                    variableRef.push(ts)
+                }
+            }
+            else{
+                if(variableRef.indexOf(t) <0){
+                    variableRef.push(t);
+                }
+            }
+        })
+    }
+
 }

@@ -5,11 +5,12 @@ const GLSL_INTERNAL_FUNC:string[] = [
     'sin','cos','tan','asin','acos','atan','radians','degrees',
     'pow','exp','log','exp2','log2','sqrt','inversesqrt',
     'abs','ceil','clamp','floor','fract','max','min','mix','mod','sign','smoothstep','step',
-    'cross','dot','length','normalize','reflect','refract',
+    'cross','dot','length','normalize','reflect','refract','distance',
     'texture1D','texture1DProj','texture2D','texture2DProj','texture3D','texture3DProj','textureCube','texture',
     'shadow1D','shadow2D','shadow1DProj','shadow2DProj',
     'texture1DLod','texture1DProjLod','texture2DLod','texture2DProjLod','texture3DProjLod',
     'textureCubeLod','shadow1DLod','shadow2DLod','shadow1DProjLod','shadow2DProjLod',
+    'textureSize',
     'dFdx','dFdy','fwidth',
     'max',
     'clamp','inverse'

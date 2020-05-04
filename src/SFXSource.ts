@@ -223,14 +223,14 @@ export class SFXTool{
                     GLSLTool.collapseToShader(sourcePS,GLSLShaderType.Fragment,t.psEntry);
 
                     let buildtechnique = new Promise<APIResult>(async (res,rej)=>{
-
-                        let result = await GLSLTool.glslVerify(source.fileName+'.vert',sourceVS);
+                        let fname = `${source.fileName}_${t.name}`;
+                        let result = await GLSLTool.glslVerify(fname+'.vert',sourceVS);
                         if(!result.success){
                             res(result);
                             return;
                         }
 
-                        result = await GLSLTool.glslVerify(source.fileName+'.frag',sourcePS);
+                        result = await GLSLTool.glslVerify(fname+'.frag',sourcePS);
 
                         if(result.success){
                             let technique:SFXShaderTechnique = new SFXShaderTechnique();

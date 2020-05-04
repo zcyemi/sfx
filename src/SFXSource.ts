@@ -192,6 +192,9 @@ export class SFXTool{
                 source = await GLSLTool.parseGLSLFile(glslsource,sfx.fileName,verbose);
             }
             catch(e){
+                if(verbose){
+                    console.error(e);
+                }
                 res(APIResultT.Error(e))
                 return;
             }

@@ -187,6 +187,9 @@ export class SFXCompilationCtx{
                 results = await Promise.all(tasks);
             }
             catch(e){
+                if(this.config.verbose){
+                    console.error(e);
+                }
                 res(APIResultT.Error(e))
                 return;
             }
@@ -277,7 +280,10 @@ export class SFXCompilationCtx{
                     try{
                         sfxTechniques = await SFXTool.parseTechnique(sfx,this.m_sourceSFX,this.config.verbose);
                     }catch(e){
-                        res(SFXCompileResult.error(e.errmsg,sfx));
+                        if(this.config.verbose){
+                            console.error(e);
+                        }
+                        res(SFXCompileResult.error(e,sfx));
                         return;
                     }
 

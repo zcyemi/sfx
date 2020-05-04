@@ -191,12 +191,12 @@ export class GLSLSegFunction extends GLSLSeg{
         if(identifier == this.identifier) return;
         if(this.functionRef.includes(identifier)) return;
         if(this.variableDef.get(identifier)!=null) return;
-        Utility.arrayAddDistinct(this.variableRef,identifier);
+        Utility.ArrayInsert(this.variableRef,identifier);
     }
 
     public setFunctionRef(identifier:string){
         if(GLSL_INTERNAL_FUNC_MAP[identifier]) return;
-        Utility.arrayAddDistinct(this.functionRef,identifier);
+        Utility.ArrayInsert(this.functionRef,identifier);
     }
 }
 

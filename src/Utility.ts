@@ -46,21 +46,15 @@ export class APIResultT<T> extends APIResult{
 
 
 export class Utility{
-
-    public static arrayAddDistinct<T>(ary:T[],o:T):boolean{
-        if(ary.indexOf(o) >=0) return false;
-        ary.push(o);
-        return true;
-    }
-
     public static md5hash(str:string):string{
         return md5(str);
     }
 
-    public static ArrayInsert<T>(ary:T[],obj:T){
-        if(obj == null) return;
-        if(ary.indexOf(obj) >=0) return;
+    public static ArrayInsert<T>(ary:T[],obj:T):boolean{
+        if(obj == null) return false;
+        if(ary.indexOf(obj) >=0) return false;
         ary.push(obj);
+        return true;
     }
 
     public static ArrayConcatDistainct<T>(ary:T[],b:T[]){

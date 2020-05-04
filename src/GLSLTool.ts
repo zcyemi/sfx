@@ -27,15 +27,15 @@ export class GLSLDependencyInfo{
     public touchedVarRef:string[] = [];
 
     public addFunc(identifier:string):boolean{
-        return Utility.arrayAddDistinct(this.touchedFunctions,identifier);
+        return Utility.ArrayInsert(this.touchedFunctions,identifier);
     }
 
     public addType(typename:string):boolean{
-        return Utility.arrayAddDistinct(this.touchedTypes,typename);
+        return Utility.ArrayInsert(this.touchedTypes,typename);
     }
 
     public addDefineFunc(identifier:string):boolean{
-        return Utility.arrayAddDistinct(this.touchedDefineFunc,identifier);
+        return Utility.ArrayInsert(this.touchedDefineFunc,identifier);
     }
 
     /* return new variables */

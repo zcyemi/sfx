@@ -193,12 +193,16 @@ export class GLSLFileVisitor extends AbstractParseTreeVisitor<any> implements GL
     visitMember_declaration(ctx:Member_declarationContext){
         let declBlock = this.m_curDeclBlock;
         if(declBlock!=null){
-            let type_specifier = this.getTypeIdentifier(ctx.fully_specified_type().type_specifier());
-            let identifier = ctx.struct_declarator_list().text;
-            let memberInfo =new GLSLVariableInfo();
-            memberInfo.identifier=  identifier;
-            memberInfo.typeName = type_specifier;
-            declBlock.typeInfo.member.push(memberInfo);
+
+            let isPreperocesor = ctx.preprocessor_statement();
+            if(!isPreperocesor){
+                let type_specifier = this.getTypeIdentifier(ctx.fully_specified_type().type_specifier());
+                let identifier = ctx.struct_declarator_list().text;
+                let memberInfo =new GLSLVariableInfo();
+                memberInfo.identifier=  identifier;
+                memberInfo.typeName = type_specifier;
+                declBlock.typeInfo.member.push(memberInfo);
+            }
         }
         this.visitChildren(ctx);
     }

@@ -1,7 +1,7 @@
 import { Utility } from "./Utility";
 
 const GLSL_INTERNAL_FUNC:string[] = [
-    'vec4','vec3','vec2','mat2','mat3','mat4','ivec2','ivec3','ivec4',
+    'vec4','vec3','vec2','mat2','mat3','mat4','ivec2','ivec3','ivec4','float','int','bool',
     'sin','cos','tan','asin','acos','atan','radians','degrees',
     'pow','exp','log','exp2','log2','sqrt','inversesqrt',
     'abs','ceil','clamp','floor','fract','max','min','mix','mod','sign','smoothstep','step',

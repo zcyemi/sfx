@@ -91,6 +91,10 @@ export class SFXShaderTechnique extends SFXTechnique{
     public sfxName:string;
 }
 
+export class SFXCompilationCtxInitCfg{
+    verbose:boolean = false;
+}
+
 export class SFXCompilationCtx{
     
     private m_sourceFiles:Map<string,SFXFileInfo> = new Map();
@@ -102,7 +106,10 @@ export class SFXCompilationCtx{
 
     public techniques:Map<string,SFXShaderTechnique> = new Map();
 
-    public constructor(){
+    public config:SFXCompilationCtxInitCfg;
+
+    public constructor(cfg?:SFXCompilationCtxInitCfg){
+        this.config = cfg == null? new SFXCompilationCtxInitCfg() : cfg;
     }
 
     public addErrorCallback(cb:SFXErrorCallabck){
@@ -268,7 +275,7 @@ export class SFXCompilationCtx{
                 
                     let sfxTechniques:APIResultT<SFXShaderTechnique[]> = null;
                     try{
-                        sfxTechniques = await SFXTool.parseTechnique(sfx,this.m_sourceSFX);
+                        sfxTechniques = await SFXTool.parseTechnique(sfx,this.m_sourceSFX,this.config.verbose);
                     }catch(e){
                         res(SFXCompileResult.error(e.errmsg,sfx));
                         return;

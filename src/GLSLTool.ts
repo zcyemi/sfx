@@ -51,8 +51,13 @@ export class GLSLDependencyInfo{
 
 export class GLSLTool{
 
-    public static parseGLSLFile(glsl:string,filename:string):Promise<GLSLFile>{
+    public static parseGLSLFile(glsl:string,filename:string,verbose:boolean = false):Promise<GLSLFile>{
         return new Promise((res,rej)=>{
+
+            if(verbose){
+                console.log(`glsl start parse: [${filename}]`);
+            }
+
             let input = new ANTLRInputStream(glsl);
             let lexer = new GLSLLexer(input);
             let tokenstream = new CommonTokenStream(lexer);

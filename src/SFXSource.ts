@@ -155,7 +155,7 @@ export class SFXTool{
         });
     }
 
-    public static parseTechnique(sfx:SFXSource,deps?:Map<string,SFXSource>):Promise<APIResultT<SFXShaderTechnique[]>>{
+    public static parseTechnique(sfx:SFXSource,deps?:Map<string,SFXSource>,verbose:boolean = false):Promise<APIResultT<SFXShaderTechnique[]>>{
         return new Promise(async (res,rej)=>{
             let depresult = await SFXTool.extractDependency(sfx,deps);
             if(!depresult.success){
@@ -189,7 +189,7 @@ export class SFXTool{
             let source:GLSLFile = null;
             glslsource +='\n';
             try{
-                source = await GLSLTool.parseGLSLFile(glslsource,sfx.fileName);
+                source = await GLSLTool.parseGLSLFile(glslsource,sfx.fileName,verbose);
             }
             catch(e){
                 res(APIResultT.Error(e))

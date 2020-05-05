@@ -38,6 +38,18 @@ describe("sfx",()=>{
         let result = await compileCtx.compile();
         expect(result.success).to.equal(false);
         expect(result.data.length).to.equal(1);
-    })
+    });
+
+    it("sfx_complex_sample",async()=>{
+
+        var compileCtx = new SFXCompilationCtx({verbose:true});
+        compileCtx.updateSource('skyboxPCG.sfx',loadSource('spec/sfx_complex/skyboxPCG.sfx'));
+        compileCtx.updateSource('basis.sfx',loadSource('spec/sfx_complex/basis.sfx'));
+
+        let result = await compileCtx.compile();
+
+        expect(result.success).equal(true);
+
+    });
 
 });

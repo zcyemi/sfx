@@ -38,6 +38,16 @@ describe("primitive",()=>{
         var ret = await GLSLTool.parseGLSLFile(glsl,"defines.glsl");
     })
 
+    it("const",async()=>{
+        var glsl = loadSource("spec/glsl/const.glsl");
+        var ret = await GLSLTool.parseGLSLFile(glsl,"const.glsl");
+    });
+
+    it("function_struct_param",async()=>{
+        var glsl = loadSource('spec/glsl/function_struct_param.glsl');
+        var ret = await GLSLTool.parseGLSLFile(glsl,'function_struct_param.glsl');
+    })
+
     it("struct",async()=>{
         var glsl = loadSource("spec/glsl/struct.glsl");
         var ret = await GLSLTool.parseGLSLFile(glsl,"struct.glsl");

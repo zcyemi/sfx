@@ -166,6 +166,10 @@ export class SFXTool{
 
             var depList = depresult.data;
 
+            if(verbose){
+                console.log(`file: ${sfx.fileName} deplist: ${depList}`);
+            }
+
             if(depList!=null && depList.length >0){
                 depList.forEach(fname=>{
 

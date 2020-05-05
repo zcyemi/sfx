@@ -6,7 +6,7 @@ import { GLSLVisitor } from "./glsl/GLSLVisitor";
 const KEYWORD_WS:string[] =[
     'struct','return','uniform',
     'precision','highp','mediump','lowp','invariant','smooth','flat','precise',
-    'in','out','inout','varying','attribute'
+    'in','out','inout','varying','attribute','const',
 ]
 
 export class GLSLFormatter extends AbstractParseTreeVisitor<string> implements GLSLVisitor<string> {
@@ -34,15 +34,5 @@ export class GLSLFormatter extends AbstractParseTreeVisitor<string> implements G
 
     aggregateResult(aggregate: string, nextResult: string): string{
         return aggregate + nextResult;
-    }
-
-    private static s_inst:GLSLFormatter;
-
-    public static get instance():GLSLFormatter{
-        let fmt = GLSLFormatter.s_inst;
-        if(fmt == null){
-            fmt = new GLSLFormatter();
-        }
-        return fmt;
     }
 }

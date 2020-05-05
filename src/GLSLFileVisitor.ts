@@ -6,6 +6,8 @@ import { GLSLFormatter } from "./GLSLFormatter";
 
 export class GLSLFileVisitor extends AbstractParseTreeVisitor<any> implements GLSLVisitor<any> {
     
+    private formatter:GLSLFormatter = new GLSLFormatter();
+
     private source:GLSLFile = new GLSLFile();
 
     public get sourceFile():GLSLFile{
@@ -58,7 +60,7 @@ export class GLSLFileVisitor extends AbstractParseTreeVisitor<any> implements GL
             let node = new GLSLSegPrecision();
             node.typeName = ctx.type_specifier().text;
             node.value = ctx.precision_qualifier().text;
-            node.text = GLSLFormatter.instance.visit(ctx);
+            node.text = this.formatter.visit(ctx);
             this.pushSegNode(node);
             return;
         }
@@ -69,7 +71,7 @@ export class GLSLFileVisitor extends AbstractParseTreeVisitor<any> implements GL
 
     //#region Preprocessor
     visitPreprocessor_statement(ctx:Preprocessor_statementContext){
-        let text = GLSLFormatter.instance.visit(ctx);
+        let text = this.formatter.visit(ctx);
         let define = ctx.PREPROC_DEFINE();
         if(define!=null){
             let node = new GLSLSegPreprocDefine();
@@ -112,7 +114,7 @@ export class GLSLFileVisitor extends AbstractParseTreeVisitor<any> implements GL
 
     visitFunction_definition(ctx:Function_definitionContext){
         let funcSeg = new GLSLSegFunction();
-        funcSeg.text = GLSLFormatter.instance.visit(ctx);
+        funcSeg.text = this.formatter.visit(ctx);
         this.m_curfuncSeg = funcSeg;
         this.visitChildren(ctx);
         this.pushSegNode(funcSeg);
@@ -154,9 +156,11 @@ export class GLSLFileVisitor extends AbstractParseTreeVisitor<any> implements GL
 
 
         let seg = new GLSLSegDeclarationBlock();
-        seg.text = GLSLFormatter.instance.visit(ctx)+';';
+        seg.text = this.formatter.visit(ctx)+';';
         seg.typeName = identifier;
         seg.typeInfo = typeInfo;
+
+        this.formatter.registerType(identifier);
 
         this.m_curDeclBlock = seg;
         this.setType(identifier,seg);
@@ -167,7 +171,7 @@ export class GLSLFileVisitor extends AbstractParseTreeVisitor<any> implements GL
     }
 
     visitInterface_block(ctx:Interface_blockContext){
-        let text = GLSLFormatter.instance.visit(ctx);
+        let text = this.formatter.visit(ctx);
         let block = ctx.basic_interface_block();
 
         let identifier = block.IDENTIFIER().text;
@@ -176,6 +180,8 @@ export class GLSLFileVisitor extends AbstractParseTreeVisitor<any> implements GL
         let typeInfo = new GLSLTypeInfo();
         typeInfo.typeName = identifier;
         typeInfo.sepcifier = specifier;
+
+        this.formatter.registerType(identifier);
 
         let seg = new GLSLSegDeclarationBlock();
         seg.text = text;
@@ -217,7 +223,7 @@ export class GLSLFileVisitor extends AbstractParseTreeVisitor<any> implements GL
             //global declaration
             
             let seg = new GLSLSegDeclaration();
-            seg.text = GLSLFormatter.instance.visit(ctx)+';';
+            seg.text = this.formatter.visit(ctx)+';';
 
 
             let arrray = ctx.array_specifier();
